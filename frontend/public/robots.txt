@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /servicios/*
+Allow: /help
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /m/*
+
+# No indexar el app autenticado ni endpoints auxiliares
+Disallow: /app/*
+Disallow: /api/*
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /login
+Disallow: /register
+
+Sitemap: /sitemap.xml

@@ -1,0 +1,75 @@
+services:
+  - type: web
+    name: presence-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT automatically; our backend reads process.env.PORT.
+
+      # --- Secrets: set these in Render dashboard (sync: false) ---
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 1h
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: vault-files
+      - key: STORAGE_PROVIDER
+        value: supabase
+
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-6
+
+      - key: GROQ_API_KEY
+        sync: false
+      - key: WHISPER_MODEL
+        value: ""
+
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADOPAGO_WEBHOOK_SECRET
+        sync: false
+      - key: MERCADOPAGO_CURRENCY
+        value: COP
+      - key: MERCADOPAGO_PRICE_PERSONAL
+        value: "36000"
+      - key: MERCADOPAGO_PRICE_FAMILY
+        value: "76000"
+
+      # FRONTEND_URL = tu URL de Cloudflare Pages (sin slash final).
+      # BACKEND_PUBLIC_URL = la URL pública que Render le da a este service.
+      # Ambas las llenas en el dashboard después del primer deploy.
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_PUBLIC_URL
+        sync: false
+
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX
+        value: "100"

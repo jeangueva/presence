@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { sendEmail } from "./emailService.js";
+import { escapeHtml } from "../utils/html.js";
 
 const wrap = (inner: string) => `<!DOCTYPE html>
 <html lang="es">
@@ -27,9 +28,12 @@ export const notifyVaultShared = async (params: {
   role: string;
 }) => {
   const url = `${env.FRONTEND_URL.replace(/\/$/, "")}/app`;
+  const inviter = escapeHtml(params.inviterName);
+  const vault = escapeHtml(params.vaultName);
+  const role = escapeHtml(params.role);
   const inner = `
     <tr><td style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#91918c;font-weight:700;padding-bottom:16px;">Te invitaron a un Memory Vault</td></tr>
-    <tr><td style="font-size:16px;line-height:1.6;padding-bottom:20px;">${params.inviterName} compartió contigo el Memory Vault de <strong>${params.vaultName}</strong> con rol de <strong>${params.role}</strong>. Ahora puedes ver los recuerdos y conversar con la IA.</td></tr>
+    <tr><td style="font-size:16px;line-height:1.6;padding-bottom:20px;">${inviter} compartió contigo el Memory Vault de <strong>${vault}</strong> con rol de <strong>${role}</strong>. Ahora puedes ver los recuerdos y conversar con la IA.</td></tr>
     <tr><td align="center" style="padding:8px 0 24px;">${button(url, "Abrir Presence")}</td></tr>
     <tr><td style="font-size:13px;line-height:1.5;color:#62625b;">Si todavía no tienes cuenta, regístrate con este mismo email para acceder.</td></tr>`;
   try {
@@ -55,10 +59,13 @@ export const notifyGuestbookPending = async (params: {
   const preview = params.message.length > 240
     ? `${params.message.slice(0, 240)}…`
     : params.message;
+  const visitor = escapeHtml(params.visitorName);
+  const memorialName = escapeHtml(params.memorialName);
+  const previewHtml = escapeHtml(preview).replace(/\n/g, "<br/>");
   const inner = `
     <tr><td style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#91918c;font-weight:700;padding-bottom:16px;">Nuevo mensaje en el libro de visitas</td></tr>
-    <tr><td style="font-size:16px;line-height:1.6;padding-bottom:8px;"><strong>${params.visitorName}</strong> dejó un mensaje en el memorial de <strong>${params.memorialName}</strong>.</td></tr>
-    <tr><td style="font-size:14px;line-height:1.6;color:#62625b;font-style:italic;padding:12px 16px;background:#f6f6f3;border-radius:12px;border-left:3px solid #7e238b;margin-bottom:20px;">"${preview.replace(/\n/g, "<br/>")}"</td></tr>
+    <tr><td style="font-size:16px;line-height:1.6;padding-bottom:8px;"><strong>${visitor}</strong> dejó un mensaje en el memorial de <strong>${memorialName}</strong>.</td></tr>
+    <tr><td style="font-size:14px;line-height:1.6;color:#62625b;font-style:italic;padding:12px 16px;background:#f6f6f3;border-radius:12px;border-left:3px solid #7e238b;margin-bottom:20px;">"${previewHtml}"</td></tr>
     <tr><td style="padding-top:20px;" align="center">${button(url, "Revisar y aprobar")}</td></tr>`;
   try {
     await sendEmail({

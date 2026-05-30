@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { supabase } from "../config/supabase.js";
+import { sanitizePostgrestQuery } from "../utils/html.js";
 
 // ---------- Activity feed ----------
 export type ActivityAction =
@@ -41,7 +42,10 @@ export const listActivity = async (vaultId: string, limit = 50) => {
 
 // ---------- Search ----------
 export const searchVault = async (vaultId: string, query: string) => {
-  const q = query.trim();
+  // Strip PostgREST reserved characters before interpolating into .or() —
+  // commas, parentheses and dots all change filter semantics. After the strip,
+  // bare letters/numbers/spaces remain, safe for ILIKE.
+  const q = sanitizePostgrestQuery(query);
   if (!q) return { files: [], messages: [] };
 
   // Postgres ILIKE on file_name + transcript.

@@ -2,11 +2,11 @@ import { Router } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { env } from "../config/env.js";
 import { getPublicMemorialBySlug } from "../services/memorialService.js";
+import { escapeHtml, escapeJsonForScript } from "../utils/html.js";
 
 const router = Router();
 
-const escape = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const escape = escapeHtml;
 
 /**
  * Pre-rendered HTML with OG meta tags for social-media scrapers visiting a
@@ -37,6 +37,28 @@ router.get(
       .slice(0, 200);
     const image = memorial.cover_photo_url ?? memorial.profile_photo_url ?? null;
     const canonical = `${env.FRONTEND_URL.replace(/\/$/, "")}/m/${memorial.public_slug}`;
+    const origin = env.FRONTEND_URL.replace(/\/$/, "");
+
+    // Schema.org Person JSON-LD for AI Overviews + crawlers JS-less.
+    const personSchema: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: memorial.deceased_name,
+      url: canonical,
+    };
+    if (memorial.birth_date) personSchema.birthDate = memorial.birth_date;
+    if (memorial.death_date) personSchema.deathDate = memorial.death_date;
+    if (memorial.deceased_bio) personSchema.description = memorial.deceased_bio;
+    if (image) personSchema.image = image;
+
+    const breadcrumbSchema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Presence", item: origin },
+        { "@type": "ListItem", position: 2, name: memorial.deceased_name, item: canonical },
+      ],
+    };
 
     const html = `<!DOCTYPE html>
 <html lang="es">
@@ -57,6 +79,9 @@ ${image ? `<meta property="og:image" content="${escape(image)}" />` : ""}
 <meta name="twitter:title" content="${escape(title)}" />
 <meta name="twitter:description" content="${escape(description)}" />
 ${image ? `<meta name="twitter:image" content="${escape(image)}" />` : ""}
+
+<script type="application/ld+json">${escapeJsonForScript(personSchema)}</script>
+<script type="application/ld+json">${escapeJsonForScript(breadcrumbSchema)}</script>
 
 <meta http-equiv="refresh" content="0; url=${escape(canonical)}" />
 </head>

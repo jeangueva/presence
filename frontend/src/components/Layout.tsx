@@ -35,13 +35,10 @@ export const Layout = () => {
           </Link>
           <nav className="flex items-center gap-1 flex-1" data-tour="main-nav">
             <NavLink to="/app" end className={navLinkClass} data-tour="nav-vaults">
-              Vaults
-            </NavLink>
-            <NavLink to="/app/memorials" className={navLinkClass} data-tour="nav-memorials">
-              Memoriales
+              Memory Vaults
             </NavLink>
             <NavLink to="/app/legacy" className={navLinkClass} data-tour="nav-legacy">
-              Plan de legado
+              Mi legado
             </NavLink>
           </nav>
           {user && (

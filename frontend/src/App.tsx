@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Landing } from "./pages/Landing";
@@ -9,9 +9,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 import { Dashboard } from "./pages/Dashboard";
 import { VaultCreate } from "./pages/VaultCreate";
 import { VaultDetail } from "./pages/VaultDetail";
-import { MemorialList } from "./pages/MemorialList";
-import { MemorialCreate } from "./pages/MemorialCreate";
-import { MemorialManage } from "./pages/MemorialManage";
+import { MemorialRedirect } from "./pages/MemorialRedirect";
 import { PublicMemorial } from "./pages/PublicMemorial";
 import { Settings } from "./pages/Settings";
 import { NotFound } from "./pages/NotFound";
@@ -50,9 +48,10 @@ const App = () => (
       <Route index element={<Dashboard />} />
       <Route path="vaults/new" element={<VaultCreate />} />
       <Route path="vaults/:id" element={<VaultDetail />} />
-      <Route path="memorials" element={<MemorialList />} />
-      <Route path="memorials/new" element={<MemorialCreate />} />
-      <Route path="memorials/:id" element={<MemorialManage />} />
+      {/* Memorials are now a surface inside their vault. Redirect old links. */}
+      <Route path="memorials" element={<Navigate to="/app" replace />} />
+      <Route path="memorials/new" element={<Navigate to="/app" replace />} />
+      <Route path="memorials/:id" element={<MemorialRedirect />} />
       <Route path="legacy" element={<Legacy />} />
       <Route path="settings" element={<Settings />} />
     </Route>

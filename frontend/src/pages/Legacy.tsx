@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  Lock,
   MessageSquareHeart,
   PawPrint,
   Plus,
@@ -11,22 +15,114 @@ import {
   Users,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { api } from "../lib/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 type TabKey = "dependents" | "pets" | "wishes" | "estate" | "messages";
 
-const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
-  { key: "dependents", label: "Dependientes", icon: Users },
-  { key: "pets", label: "Mascotas", icon: PawPrint },
-  { key: "wishes", label: "Últimos deseos", icon: Scroll },
-  { key: "estate", label: "Patrimonio", icon: ScrollText },
-  { key: "messages", label: "Mensajes póstumos", icon: MessageSquareHeart },
+const MODULES: {
+  key: TabKey;
+  label: string;
+  blurb: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    key: "dependents",
+    label: "Dependientes",
+    blurb: "Quién cuida a hijos, padres o personas a tu cargo.",
+    icon: Users,
+  },
+  {
+    key: "pets",
+    label: "Mascotas",
+    blurb: "Cuidador, veterinario y rutinas de tus mascotas.",
+    icon: PawPrint,
+  },
+  {
+    key: "wishes",
+    label: "Últimos deseos",
+    blurb: "Cómo quieres ser recordada/o: ceremonia, música, despedida.",
+    icon: Scroll,
+  },
+  {
+    key: "estate",
+    label: "Patrimonio",
+    blurb: "Bienes, herederos y albacea de confianza.",
+    icon: ScrollText,
+  },
+  {
+    key: "messages",
+    label: "Mensajes póstumos",
+    blurb: "Mensajes que se entregan a personas concretas después.",
+    icon: MessageSquareHeart,
+  },
 ];
 
+/**
+ * Status for each legacy module, derived from the *same* react-query keys the
+ * module tabs use — so the cache is shared and the hub shows real completeness
+ * without duplicate fetches.
+ */
+const useLegacyStatus = (): Record<TabKey, boolean> => {
+  const dependents = useQuery({
+    queryKey: ["legacy-dependents"],
+    queryFn: async () =>
+      (await api.get<{ entries: unknown[] }>("/legacy/dependents")).data.entries,
+  });
+  const pets = useQuery({
+    queryKey: ["legacy-pets"],
+    queryFn: async () => (await api.get<{ entries: unknown[] }>("/legacy/pets")).data.entries,
+  });
+  const wishes = useQuery({
+    queryKey: ["legacy-wishes"],
+    queryFn: async () =>
+      (await api.get<Record<string, unknown> | null>("/legacy/final-wishes")).data,
+  });
+  const estate = useQuery({
+    queryKey: ["legacy-estate"],
+    queryFn: async () =>
+      (await api.get<Record<string, unknown> | null>("/legacy/estate")).data,
+  });
+  const heirs = useQuery({
+    queryKey: ["legacy-heirs"],
+    queryFn: async () =>
+      (await api.get<{ entries: unknown[] }>("/legacy/estate/heirs")).data.entries,
+  });
+  const assets = useQuery({
+    queryKey: ["legacy-assets"],
+    queryFn: async () =>
+      (await api.get<{ entries: unknown[] }>("/legacy/estate/assets")).data.entries,
+  });
+  const messages = useQuery({
+    queryKey: ["legacy-posthumous"],
+    queryFn: async () =>
+      (await api.get<{ entries: unknown[] }>("/legacy/posthumous-messages")).data.entries,
+  });
+
+  const hasAnyValue = (obj: Record<string, unknown> | null | undefined) =>
+    !!obj && Object.values(obj).some((v) => v !== null && v !== undefined && v !== "");
+
+  return {
+    dependents: (dependents.data?.length ?? 0) > 0,
+    pets: (pets.data?.length ?? 0) > 0,
+    wishes: hasAnyValue(wishes.data),
+    estate:
+      hasAnyValue(estate.data) ||
+      (heirs.data?.length ?? 0) > 0 ||
+      (assets.data?.length ?? 0) > 0,
+    messages: (messages.data?.length ?? 0) > 0,
+  };
+};
+
 export const Legacy = () => {
-  useDocumentTitle("Plan de legado");
-  const [tab, setTab] = useState<TabKey>("dependents");
+  useDocumentTitle("Mi legado");
+  const [section, setSection] = useState<TabKey | null>(null);
+  const status = useLegacyStatus();
+
+  const doneCount = MODULES.filter((m) => status[m.key]).length;
+  const pct = Math.round((doneCount / MODULES.length) * 100);
+  const active = MODULES.find((m) => m.key === section);
 
   return (
     <motion.div
@@ -37,48 +133,122 @@ export const Legacy = () => {
     >
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
-          Pilares 3 + 4
+          Para prepararte tú
         </p>
-        <h1 className="font-serif text-4xl text-warm-plum">Mi plan de legado</h1>
+        <h1 className="font-serif text-4xl text-warm-plum">Mi legado</h1>
         <p className="text-warm-olive mt-2 max-w-2xl">
-          Documenta lo que tu familia necesitará saber el día que no estés. Todo se
-          guarda cifrado. Tú decides cuándo y cómo se libera.
+          Lo que tu familia necesitará saber el día que no estés. Todo se guarda
+          cifrado. Tú decides cuándo y cómo se libera.
         </p>
-      </div>
-
-      <div className="flex gap-1 border-b border-warm-sand overflow-x-auto pb-px">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
-                tab === t.key
-                  ? "border-warm-accent text-warm-plum"
-                  : "border-transparent text-warm-olive hover:text-warm-plum"
-              }`}
-            >
-              <Icon size={14} /> {t.label}
-            </button>
-          );
-        })}
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div
-          key={tab}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
-        >
-          {tab === "dependents" && <DependentsTab />}
-          {tab === "pets" && <PetsTab />}
-          {tab === "wishes" && <WishesTab />}
-          {tab === "estate" && <EstateTab />}
-          {tab === "messages" && <MessagesTab />}
-        </motion.div>
+        {!section && (
+          <motion.div
+            key="hub"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            {/* Progress */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold text-warm-plum">
+                  Tu plan está {pct}% completo
+                </p>
+                <span className="text-xs text-warm-silver">
+                  {doneCount} de {MODULES.length} secciones
+                </span>
+              </div>
+              <div className="h-2.5 rounded-full bg-warm-fog overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full bg-warm-accent"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+            </div>
+
+            {/* Module cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {MODULES.map((m) => {
+                const Icon = m.icon;
+                const done = status[m.key];
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setSection(m.key)}
+                    className="text-left card flex items-start gap-4 hover:border-warm-silver transition group"
+                  >
+                    <div className="w-11 h-11 rounded-2xl bg-warm-light flex items-center justify-center shrink-0">
+                      <Icon size={20} className="text-warm-plum" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-serif text-xl text-warm-plum">{m.label}</h3>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                            done
+                              ? "bg-warm-accent/10 text-warm-accent"
+                              : "bg-warm-fog text-warm-silver"
+                          }`}
+                        >
+                          {done ? <Check size={10} /> : null}
+                          {done ? "Listo" : "Pendiente"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-warm-olive mt-1 leading-relaxed">
+                        {m.blurb}
+                      </p>
+                    </div>
+                    <ChevronRight
+                      size={18}
+                      className="text-warm-silver group-hover:text-warm-accent transition shrink-0 mt-1"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="text-xs text-warm-silver flex items-center gap-1.5">
+              <Lock size={12} /> Cifrado en reposo. Solo se libera según tus instrucciones.
+            </p>
+          </motion.div>
+        )}
+
+        {section && (
+          <motion.div
+            key={section}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            <button
+              type="button"
+              onClick={() => setSection(null)}
+              className="inline-flex items-center gap-1.5 text-sm text-warm-olive hover:text-warm-plum transition"
+            >
+              <ArrowLeft size={16} /> Volver a Mi legado
+            </button>
+            {active && (
+              <h2 className="font-serif text-3xl text-warm-plum flex items-center gap-2">
+                <active.icon size={22} className="text-warm-accent" />
+                {active.label}
+              </h2>
+            )}
+            {section === "dependents" && <DependentsTab />}
+            {section === "pets" && <PetsTab />}
+            {section === "wishes" && <WishesTab />}
+            {section === "estate" && <EstateTab />}
+            {section === "messages" && <MessagesTab />}
+          </motion.div>
+        )}
       </AnimatePresence>
     </motion.div>
   );

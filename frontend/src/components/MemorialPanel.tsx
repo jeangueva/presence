@@ -1,16 +1,10 @@
 import { useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  Calendar,
   Check,
   Globe,
+  Heart,
   Image as ImageIcon,
   Link as LinkIcon,
   Lock,
@@ -21,11 +15,14 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../lib/api";
-import { ProfilePhotoUploader } from "../components/ProfilePhotoUploader";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { ProfilePhotoUploader } from "./ProfilePhotoUploader";
+import { UpgradeModal, type QuotaInfo } from "./UpgradeModal";
+import { extractQuota } from "../lib/quota";
+import { Shimmer } from "./Shimmer";
 
 type Memorial = {
   id: string;
+  vault_id: string;
   deceased_name: string;
   deceased_bio?: string | null;
   birth_date?: string | null;
@@ -60,26 +57,97 @@ const formatDate = (iso: string) =>
     year: "numeric",
   });
 
-export const MemorialManage = () => {
-  const { id } = useParams<{ id: string }>();
+/**
+ * Public-memorial management as a surface *inside* a vault. A memorial is the
+ * public face of a vault (1:1, FK vault_id), so it lives here rather than as a
+ * top-level sibling. If no memorial exists yet for this vault, we lazily create
+ * one on demand instead of forcing a separate "pick a vault" flow.
+ */
+export const MemorialPanel = ({ vaultId }: { vaultId: string }) => {
+  const qc = useQueryClient();
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
+  // The memorial list already carries vault_id, so we resolve the vault's
+  // memorial client-side — no dedicated endpoint needed.
+  const memorialsQ = useQuery({
+    queryKey: ["memorials"],
+    queryFn: async () =>
+      (await api.get<{ memorials: Memorial[] }>("/memorials")).data.memorials,
+  });
+
+  const memorial = memorialsQ.data?.find((m) => m.vault_id === vaultId) ?? null;
+
+  const createMemorial = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<Memorial>("/memorials", { vault_id: vaultId });
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorials"] }),
+    onError: (err) => {
+      const q = extractQuota(err);
+      if (q) setQuota(q);
+    },
+  });
+
+  if (memorialsQ.isLoading) {
+    return (
+      <div className="card">
+        <Shimmer className="h-7 w-1/3 mb-3" />
+        <Shimmer className="h-4 w-2/3" />
+      </div>
+    );
+  }
+
+  if (!memorial) {
+    return (
+      <>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card text-center py-12"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-warm-accent/10 flex items-center justify-center mx-auto mb-4">
+            <Heart size={24} className="text-warm-accent" fill="currentColor" />
+          </div>
+          <h3 className="font-serif text-2xl text-warm-plum mb-2">
+            Crea la página pública
+          </h3>
+          <p className="text-warm-olive mb-6 max-w-md mx-auto">
+            Un memorial es la cara pública de este vault. Hereda el nombre, la biografía
+            y las fechas, y añade galería y libro de visitas para que familia y amigos
+            honren la memoria.
+          </p>
+          <button
+            type="button"
+            onClick={() => createMemorial.mutate()}
+            disabled={createMemorial.isPending}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Heart size={16} />
+            {createMemorial.isPending ? "Creando..." : "Crear memorial"}
+          </button>
+        </motion.div>
+        <UpgradeModal open={!!quota} quota={quota} onClose={() => setQuota(null)} />
+      </>
+    );
+  }
+
+  return <MemorialManager memorial={memorial} />;
+};
+
+// ----- Management UI for an existing memorial -----
+const MemorialManager = ({ memorial }: { memorial: Memorial }) => {
+  const id = memorial.id;
   const qc = useQueryClient();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<"info" | "photos" | "guestbook">("info");
   const [copySuccess, setCopySuccess] = useState(false);
 
-  const memorialQ = useQuery({
-    queryKey: ["memorial", id],
-    queryFn: async () => (await api.get<Memorial>(`/memorials/${id}`)).data,
-    enabled: !!id,
-  });
-
-  useDocumentTitle(memorialQ.data?.deceased_name);
-
   const photosQ = useQuery({
     queryKey: ["memorial-photos", id],
     queryFn: async () =>
       (await api.get<{ photos: Photo[] }>(`/memorials/${id}/photos`)).data.photos,
-    enabled: !!id && tab === "photos",
+    enabled: tab === "photos",
   });
 
   const guestbookQ = useQuery({
@@ -87,27 +155,28 @@ export const MemorialManage = () => {
     queryFn: async () =>
       (await api.get<{ entries: GuestbookEntry[] }>(`/memorials/${id}/guestbook`))
         .data.entries,
-    enabled: !!id && tab === "guestbook",
+    enabled: tab === "guestbook",
   });
 
   const togglePublic = useMutation({
     mutationFn: async (isPublic: boolean) => {
       await api.post(`/memorials/${id}/public`, { public: isPublic });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorial", id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorials"] }),
   });
 
   const updateInfo = useMutation({
     mutationFn: async (patch: Partial<Memorial>) => {
       await api.put(`/memorials/${id}`, patch);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorial", id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorials"] }),
   });
 
   const removeMemorial = useMutation({
     mutationFn: async () => {
       await api.delete(`/memorials/${id}`);
     },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorials"] }),
   });
 
   const uploadPhoto = useMutation({
@@ -149,31 +218,10 @@ export const MemorialManage = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["memorial-guestbook", id] }),
   });
 
-  if (memorialQ.isLoading) {
-    return (
-      <div className="card animate-pulse">
-        <div className="h-8 w-1/3 bg-warm-fog rounded mb-3" />
-        <div className="h-4 w-1/4 bg-warm-fog rounded" />
-      </div>
-    );
-  }
-  if (memorialQ.error || !memorialQ.data) {
-    return (
-      <div className="card border-red-100 bg-red-50">
-        <p className="text-red-700">No se pudo cargar este memorial.</p>
-      </div>
-    );
-  }
-
-  const memorial = memorialQ.data;
-  const lifespan = [memorial.birth_date, memorial.death_date]
-    .filter(Boolean)
-    .join(" – ");
   const publicUrl = memorial.public_slug
     ? `${window.location.origin}/m/${memorial.public_slug}`
     : null;
-  const pendingCount =
-    guestbookQ.data?.filter((e) => !e.approved).length ?? 0;
+  const pendingCount = guestbookQ.data?.filter((e) => !e.approved).length ?? 0;
 
   const onCopyLink = async () => {
     if (!publicUrl) return;
@@ -188,101 +236,67 @@ export const MemorialManage = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <Link
-        to="/app/memorials"
-        className="inline-flex items-center gap-1.5 text-sm text-warm-olive hover:text-warm-plum transition"
-      >
-        <ArrowLeft size={16} /> Volver
-      </Link>
-
-      {/* HERO */}
-      <div className="card relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-warm-accent/5 blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col sm:flex-row sm:items-start gap-5">
-          <ProfilePhotoUploader
-            uploadUrl={`/memorials/${id}/profile-photo`}
-            currentUrl={memorial.profile_photo_url}
-            fallback={memorial.deceased_name}
-            size={88}
-            onUploaded={() => qc.invalidateQueries({ queryKey: ["memorial", id] })}
-          />
-          <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
-            Memorial Interactivo
-          </p>
-          <h1 className="font-serif text-4xl sm:text-5xl text-warm-plum">
-            {memorial.deceased_name}
-          </h1>
-          {lifespan && (
-            <p className="text-sm text-warm-olive flex items-center gap-1.5 mt-2">
-              <Calendar size={14} />
-              {lifespan}
+      {/* Public toggle */}
+      <div className="card">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="font-semibold text-warm-plum flex items-center gap-2">
+              {memorial.public ? (
+                <>
+                  <Globe size={16} className="text-warm-accent" />
+                  Memorial público
+                </>
+              ) : (
+                <>
+                  <Lock size={16} className="text-warm-olive" />
+                  Memorial privado
+                </>
+              )}
             </p>
-          )}
-
-          {/* Public toggle */}
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-warm-fog/60 rounded-2xl">
-            <div className="flex-1">
-              <p className="font-semibold text-warm-plum flex items-center gap-2">
-                {memorial.public ? (
-                  <>
-                    <Globe size={16} className="text-warm-accent" />
-                    Memorial público
-                  </>
-                ) : (
-                  <>
-                    <Lock size={16} className="text-warm-olive" />
-                    Memorial privado
-                  </>
-                )}
-              </p>
-              <p className="text-sm text-warm-olive mt-1">
-                {memorial.public
-                  ? "Cualquiera con el link puede verlo y dejar mensajes."
-                  : "Solo tú puedes verlo. Hazlo público para compartir el link."}
-              </p>
-            </div>
-            <button
-              onClick={() => togglePublic.mutate(!memorial.public)}
-              disabled={togglePublic.isPending}
-              className={memorial.public ? "btn-secondary" : "btn-primary"}
-            >
-              {memorial.public ? "Hacer privado" : "Hacer público"}
-            </button>
+            <p className="text-sm text-warm-olive mt-1">
+              {memorial.public
+                ? "Cualquiera con el link puede verlo y dejar mensajes."
+                : "Solo tú puedes verlo. Hazlo público para compartir el link."}
+            </p>
           </div>
-
-          {/* Public URL */}
-          {memorial.public && publicUrl && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-3 flex items-center gap-2 p-3 border border-warm-sand rounded-2xl"
-            >
-              <LinkIcon size={16} className="text-warm-silver shrink-0" />
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm font-mono text-warm-plum truncate flex-1 hover:text-warm-accent transition"
-              >
-                {publicUrl}
-              </a>
-              <button
-                type="button"
-                onClick={onCopyLink}
-                className="text-xs font-bold px-3 py-1.5 rounded-xl bg-warm-light hover:bg-warm-sand text-warm-plum transition shrink-0"
-              >
-                {copySuccess ? "Copiado!" : "Copiar"}
-              </button>
-            </motion.div>
-          )}
-          </div>
+          <button
+            onClick={() => togglePublic.mutate(!memorial.public)}
+            disabled={togglePublic.isPending}
+            className={memorial.public ? "btn-secondary" : "btn-primary"}
+          >
+            {memorial.public ? "Hacer privado" : "Hacer público"}
+          </button>
         </div>
+
+        {memorial.public && publicUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex items-center gap-2 p-3 border border-warm-sand rounded-2xl"
+          >
+            <LinkIcon size={16} className="text-warm-silver shrink-0" />
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-mono text-warm-plum truncate flex-1 hover:text-warm-accent transition"
+            >
+              {publicUrl}
+            </a>
+            <button
+              type="button"
+              onClick={onCopyLink}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-warm-light hover:bg-warm-sand text-warm-plum transition shrink-0"
+            >
+              {copySuccess ? "Copiado!" : "Copiar"}
+            </button>
+          </motion.div>
+        )}
       </div>
 
       {/* TABS */}
@@ -328,12 +342,10 @@ export const MemorialManage = () => {
               onDelete={() => {
                 if (
                   confirm(
-                    "¿Eliminar este memorial? Esta acción es permanente y borra fotos y mensajes."
+                    "¿Eliminar la página pública? Borra fotos y mensajes del memorial. El vault privado se conserva."
                   )
                 ) {
-                  removeMemorial.mutate(undefined, {
-                    onSuccess: () => (window.location.href = "/app/memorials"),
-                  });
+                  removeMemorial.mutate();
                 }
               }}
             />
@@ -559,6 +571,7 @@ const InfoPanel = ({
   saving: boolean;
   onDelete: () => void;
 }) => {
+  const qc = useQueryClient();
   const [form, setForm] = useState({
     deceased_name: memorial.deceased_name ?? "",
     deceased_bio: memorial.deceased_bio ?? "",
@@ -578,6 +591,23 @@ const InfoPanel = ({
 
   return (
     <form onSubmit={submit} className="card space-y-5">
+      <div className="flex items-start gap-4">
+        <ProfilePhotoUploader
+          uploadUrl={`/memorials/${memorial.id}/profile-photo`}
+          currentUrl={memorial.profile_photo_url}
+          fallback={memorial.deceased_name}
+          size={72}
+          onUploaded={() => qc.invalidateQueries({ queryKey: ["memorials"] })}
+        />
+        <div className="flex-1">
+          <p className="text-xs font-bold uppercase tracking-wider text-warm-olive mb-2">
+            Foto pública del memorial
+          </p>
+          <p className="text-sm text-warm-silver">
+            Puede diferir de la foto del vault privado. Esta es la que ven los visitantes.
+          </p>
+        </div>
+      </div>
       <div>
         <label className="block text-xs font-bold uppercase tracking-wider text-warm-olive mb-2">
           Nombre completo
@@ -630,7 +660,7 @@ const InfoPanel = ({
           className="text-sm text-warm-olive hover:text-red-700 inline-flex items-center gap-1.5 transition"
         >
           <Trash2 size={14} />
-          Eliminar memorial
+          Eliminar página pública
         </button>
         <button type="submit" disabled={saving} className="btn-primary">
           {saving ? "Guardando..." : "Guardar cambios"}

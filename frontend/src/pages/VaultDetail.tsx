@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import {
   ArrowLeft,
+  Archive,
   Calendar,
   ChevronDown,
   Copy,
@@ -11,9 +12,11 @@ import {
   FileImage,
   FileText,
   FileVideo,
+  Globe,
   Headphones,
   Loader2,
   Mail,
+  MessageCircle,
   Pencil,
   Search,
   Sparkles,
@@ -29,8 +32,11 @@ import { extractQuota } from "../lib/quota";
 import { api } from "../lib/api";
 import { UploadZone } from "../components/UploadZone";
 import { VaultChat } from "../components/VaultChat";
+import { MemorialPanel } from "../components/MemorialPanel";
 import { useAuthStore } from "../store/authStore";
 import { Shimmer } from "../components/Shimmer";
+
+type Surface = "conversar" | "recuerdos" | "memorial";
 
 type Vault = {
   id: string;
@@ -87,6 +93,27 @@ export const VaultDetail = () => {
   const [editedBio, setEditedBio] = useState("");
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  // Surface tabs: the person stays the same, the way you engage changes. Deep
+  // links (e.g. redirects from the old /app/memorials/:id) can preselect one.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSurface = (searchParams.get("surface") as Surface | null) ?? "conversar";
+  const [surface, setSurface] = useState<Surface>(
+    ["conversar", "recuerdos", "memorial"].includes(initialSurface)
+      ? initialSurface
+      : "conversar"
+  );
+  const selectSurface = (s: Surface) => {
+    setSurface(s);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (s === "conversar") next.delete("surface");
+        else next.set("surface", s);
+        return next;
+      },
+      { replace: true }
+    );
+  };
   const toggleExpanded = (fileId: string) =>
     setExpandedFiles((prev) => {
       const next = new Set(prev);
@@ -401,6 +428,63 @@ export const VaultDetail = () => {
         </div>
       </motion.div>
 
+      {/* SURFACE TABS — same person, different way to engage */}
+      <div className="flex gap-1 border-b border-warm-sand overflow-x-auto pb-px">
+        {([
+          { key: "conversar" as const, label: "Conversar", icon: <MessageCircle size={14} /> },
+          { key: "recuerdos" as const, label: "Recuerdos", icon: <Archive size={14} /> },
+          { key: "memorial" as const, label: "Memorial público", icon: <Globe size={14} /> },
+        ]).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => selectSurface(t.key)}
+            className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
+              surface === t.key
+                ? "border-warm-accent text-warm-plum"
+                : "border-transparent text-warm-olive hover:text-warm-plum"
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {surface === "conversar" && (
+          <motion.div
+            key="surface-conversar"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+          >
+            <VaultChat vaultId={id!} />
+          </motion.div>
+        )}
+
+        {surface === "memorial" && (
+          <motion.div
+            key="surface-memorial"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+          >
+            <MemorialPanel vaultId={id!} />
+          </motion.div>
+        )}
+
+        {surface === "recuerdos" && (
+          <motion.div
+            key="surface-recuerdos"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
       {/* AI BIOGRAPHY (collapsible + editable) */}
       {biographyQ.data?.biography && (
         <motion.div
@@ -506,9 +590,8 @@ export const VaultDetail = () => {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* FILES */}
-        <motion.div
+      {/* FILES */}
+      <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
@@ -669,16 +752,6 @@ export const VaultDetail = () => {
           </div>
         </motion.div>
 
-        {/* CHAT */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <VaultChat vaultId={id!} />
-        </motion.div>
-      </div>
-
       {/* SHARING (only for owner) */}
       {isOwner && (
         <motion.div
@@ -794,38 +867,6 @@ export const VaultDetail = () => {
         </motion.div>
       )}
 
-      <UpgradeModal open={!!quota} quota={quota} onClose={() => setQuota(null)} />
-
-      {/* EDIT INFO MODAL */}
-      <AnimatePresence>
-        {isEditingInfo && (
-          <motion.div
-            key="edit-info-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-warm-plum/30 backdrop-blur-sm flex items-center justify-center px-4 py-8"
-            onClick={() => !updateVaultInfo.isPending && setIsEditingInfo(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="card w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <EditInfoPanel
-                vault={vault}
-                onCancel={() => setIsEditingInfo(false)}
-                onSave={(patch) => updateVaultInfo.mutate(patch)}
-                saving={updateVaultInfo.isPending}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ACTIVITY FEED (owner only) */}
       {isOwner && activityQ.data && activityQ.data.length > 0 && (
         <motion.div
@@ -860,6 +901,41 @@ export const VaultDetail = () => {
           </div>
         </motion.div>
       )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <UpgradeModal open={!!quota} quota={quota} onClose={() => setQuota(null)} />
+
+      {/* EDIT INFO MODAL */}
+      <AnimatePresence>
+        {isEditingInfo && (
+          <motion.div
+            key="edit-info-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-warm-plum/30 backdrop-blur-sm flex items-center justify-center px-4 py-8"
+            onClick={() => !updateVaultInfo.isPending && setIsEditingInfo(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="card w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <EditInfoPanel
+                vault={vault}
+                onCancel={() => setIsEditingInfo(false)}
+                onSave={(patch) => updateVaultInfo.mutate(patch)}
+                saving={updateVaultInfo.isPending}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

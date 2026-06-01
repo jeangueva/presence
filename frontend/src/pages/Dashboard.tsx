@@ -67,9 +67,9 @@ const DASHBOARD_TOUR_STEPS: TourStep[] = [
   },
   {
     selector: '[data-tour="main-nav"]',
-    title: "Tres pilares",
+    title: "Dos espacios",
     body:
-      "Vaults: privados, para conversar. Memoriales: páginas públicas para que familia honre la memoria. Plan de legado: lo que tu familia necesitará de ti el día que no estés.",
+      "Memory Vaults: para recordar a quienes ya no están — conversa con su IA y, dentro de cada vault, publica su memorial. Mi legado: para prepararte tú — lo que tu familia necesitará el día que no estés.",
     placement: "bottom",
   },
   {

@@ -5,10 +5,26 @@ import { Check, Heart, Sparkles, X } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { PLAN_ORDER, PLANS, type PlanId } from "../lib/plans";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useMeta } from "../hooks/useMeta";
+import { useStructuredData } from "../hooks/useStructuredData";
+import { buildPricingSchema } from "../lib/seo";
 
 export const Pricing = () => {
-  useDocumentTitle("Precios");
+  useMeta({
+    title: "Precios",
+    description:
+      "Tres planes para preservar memorias: Free, Personal $9/mes y Family $19/mes. Cancela cuando quieras, exporta tus datos siempre.",
+    canonical: "/pricing",
+  });
+  useStructuredData(
+    buildPricingSchema(
+      PLAN_ORDER.filter((id) => id !== "free").map((id) => ({
+        name: PLANS[id].name,
+        description: PLANS[id].tagline,
+        priceMonthlyUsd: PLANS[id].price_usd_monthly,
+      }))
+    )
+  );
   const navigate = useNavigate();
   const isAuthed = useAuthStore((s) => !!s.accessToken);
   const [loading, setLoading] = useState<PlanId | null>(null);

@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Send, Calendar, Sparkles } from "lucide-react";
 import axios from "axios";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useMeta } from "../hooks/useMeta";
+import { useStructuredData } from "../hooks/useStructuredData";
+import { buildPersonSchema, SITE_ORIGIN } from "../lib/seo";
 
 type Memorial = {
   id: string;
@@ -73,8 +75,33 @@ export const PublicMemorial = () => {
     retry: false,
   });
 
-  useDocumentTitle(
-    memorialQ.data ? `${memorialQ.data.deceased_name} · Memorial` : null
+  useMeta({
+    title: memorialQ.data
+      ? `En memoria de ${memorialQ.data.deceased_name}`
+      : null,
+    description: memorialQ.data
+      ? (memorialQ.data.deceased_bio ?? "").slice(0, 200) ||
+        `Memorial digital en honor a ${memorialQ.data.deceased_name}.`
+      : undefined,
+    canonical: memorialQ.data ? `/m/${memorialQ.data.public_slug}` : undefined,
+    ogTitle: memorialQ.data
+      ? `En memoria de ${memorialQ.data.deceased_name}`
+      : undefined,
+    ogImage: memorialQ.data?.cover_photo_url || memorialQ.data?.profile_photo_url || undefined,
+  });
+  useStructuredData(
+    memorialQ.data
+      ? [
+          buildPersonSchema({
+            name: memorialQ.data.deceased_name,
+            birthDate: memorialQ.data.birth_date,
+            deathDate: memorialQ.data.death_date,
+            description: memorialQ.data.deceased_bio,
+            image: memorialQ.data.profile_photo_url ?? memorialQ.data.cover_photo_url,
+            url: `${SITE_ORIGIN}/m/${memorialQ.data.public_slug}`,
+          }),
+        ]
+      : []
   );
 
   const photosQ = useQuery({

@@ -165,7 +165,7 @@ export const SERVICES: ServiceContent[] = [
     tagline:
       "Mensajes que se envían a personas específicas cuando tú ya no estés. Escritos hoy, entregados el día que cuente.",
     description:
-      "Redacta mensajes para tus hijos, pareja, padres, amigos. Cada uno con su destinatario, asunto y contenido. Quedan guardados hasta que tu cuenta sea marcada como cerrada — entonces se envían automáticamente por email.",
+      "Redacta mensajes para tus hijos, pareja, padres, amigos. Cada uno con su destinatario, asunto y contenido. Quedan guardados cifrados hasta que se verifique tu fallecimiento — entonces se entregan por email.",
     icon: MessageSquareHeart,
     features: [
       {
@@ -173,22 +173,22 @@ export const SERVICES: ServiceContent[] = [
         body: "Uno por persona, con asunto y contenido completos. Tantos como quieras.",
       },
       {
-        title: "Entrega automática",
-        body: "Cuando un familiar reporta tu fallecimiento y se verifica, los mensajes salen por email.",
+        title: "Entrega verificada (beta)",
+        body: "Hoy la entrega requiere verificación manual del fallecimiento por nuestro equipo, a partir de la documentación que aporta tu persona de confianza. La automatización llega más adelante.",
       },
       {
         title: "Editables hasta el último día",
-        body: "Cambia el contenido cuando quieras. Solo se enviará la versión más reciente.",
+        body: "Cambia el contenido cuando quieras. Solo se entregará la versión más reciente.",
       },
       {
         title: "Próximamente: audio y video",
-        body: "Por ahora texto. Audio y video llegan en próximas iteraciones.",
+        body: "Por ahora solo texto. Audio y video llegan en próximas iteraciones.",
       },
     ],
     faqs: [
       {
         q: "¿Cómo saben que ya no estoy?",
-        a: "Hoy se envían cuando una persona de confianza (que tú designaste) confirma tu fallecimiento con documentación. En el futuro automatizaremos con triggers adicionales.",
+        a: "Hoy la entrega es manual y está en beta: una persona de confianza que tú designaste nos contacta con documentación, nuestro equipo la verifica y los mensajes salen por email. No hay entrega automática todavía. Si necesitas garantía absoluta, deja también copia con tu albacea o notario.",
       },
     ],
     cta: "Escribir mi primer mensaje",

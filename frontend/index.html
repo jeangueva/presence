@@ -3,12 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Presence</title>
-    <meta name="description" content="Presence — Tu memoria, viva para siempre. Plataforma de legado digital." />
+    <title>Presence — Tu memoria, viva para siempre</title>
+    <meta name="description" content="Plataforma de legado digital. Convierte biografías, fotos y voces en una IA con la que puedes conversar — para honrar, recordar y mantener viva la presencia de quienes te importan." />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Presence — Tu memoria, viva para siempre" />
+    <meta property="og:description" content="Plataforma de legado digital. Memory Vaults, memoriales públicos y planificación para tu familia." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Presence" />
+    <meta property="og:image" content="/favicon.svg" />
+    <meta property="og:locale" content="es_ES" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Presence — Tu memoria, viva para siempre" />
+    <meta name="twitter:description" content="Plataforma de legado digital." />
+
+    <!-- Icons / PWA -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="mask-icon" href="/favicon.svg" color="#7e238b" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#7e238b" />
+
+    <!--
+      JSON-LD baseline: Organization + WebSite.
+      Estos schemas son leídos por crawlers (Google, Bing, ChatGPT, Perplexity)
+      sin necesidad de ejecutar JS. Schemas más específicos (Service, FAQPage,
+      Product, Person) se inyectan por página via useStructuredData hook.
+    -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Presence",
+      "url": "https://presence.app",
+      "logo": "https://presence.app/favicon.svg",
+      "description": "Plataforma de legado digital. Memory Vaults conversacionales, memoriales públicos y planificación de legado.",
+      "foundingDate": "2025",
+      "areaServed": ["ES", "MX", "AR", "CO", "CL", "PE", "UY"],
+      "knowsAbout": [
+        "Legado digital",
+        "Memorial digital",
+        "Planificación patrimonial",
+        "Últimos deseos",
+        "Mensajes póstumos",
+        "Cuidado de dependientes",
+        "Cuidado de mascotas"
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Presence",
+      "url": "https://presence.app",
+      "inLanguage": "es-ES",
+      "publisher": { "@type": "Organization", "name": "Presence" }
+    }
+    </script>
   </head>
   <body class="bg-warm-fog text-warm-plum">
     <div id="root"></div>

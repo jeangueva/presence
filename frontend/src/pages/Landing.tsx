@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { SERVICES as SERVICES_LIST } from "../lib/services";
+import { useMeta } from "../hooks/useMeta";
 
 const pillars = [
   {
@@ -26,19 +27,19 @@ const pillars = [
     icon: Heart,
     title: "Memorial Interactivo",
     desc: "Un espacio público y dignificado para honrar su vida — línea de tiempo, libro de visitas y galería curada.",
-    status: "soon" as const,
+    status: "available" as const,
   },
   {
     icon: Send,
     title: "Legacy Planner",
     desc: "Mensajes, audios y videos programados para fechas futuras — cumpleaños, graduaciones, momentos clave.",
-    status: "soon" as const,
+    status: "available" as const,
   },
   {
     icon: ScrollText,
     title: "Testamento Digital",
     desc: "Documento legal generado, notariado y firmado en blockchain — cuentas, herederos, instrucciones finales.",
-    status: "soon" as const,
+    status: "available" as const,
   },
 ];
 
@@ -330,6 +331,13 @@ export const Landing = () => {
   const navigate = useNavigate();
   const isAuthed = useAuthStore((s) => !!s.accessToken);
 
+  useMeta({
+    title: null, // landing usa el título base "Presence — Tu memoria, viva para siempre"
+    description:
+      "Plataforma de legado digital. Convierte biografías, fotos y voces en una IA con la que puedes conversar — para honrar, recordar y mantener viva la presencia de quienes te importan.",
+    canonical: "/",
+  });
+
   useEffect(() => {
     if (isAuthed) navigate("/app", { replace: true });
   }, [isAuthed, navigate]);
@@ -447,8 +455,8 @@ export const Landing = () => {
               Un legado completo, construido con cuidado.
             </h2>
             <p className="text-warm-olive max-w-2xl mb-12 text-lg">
-              Hoy lanzamos Memory Vault. Los siguientes tres pilares llegan en las próximas
-              iteraciones — todos pensados para acompañarte en distintos momentos.
+              Dos para recordar a quienes ya no están, dos para preparar lo que tu familia
+              necesitará el día que tú no estés. Todos disponibles hoy.
             </p>
           </FadeIn>
 
@@ -536,7 +544,7 @@ export const Landing = () => {
         </div>
       </section>
 
-      {/* SERVICIOS (Pilar 3 + 4) */}
+      {/* SERVICIOS — los 5 módulos de "Mi legado" + organizador patrimonial */}
       <section className="px-6 py-20 sm:py-28 bg-warm-fog">
         <div className="max-w-6xl mx-auto">
           <FadeIn>

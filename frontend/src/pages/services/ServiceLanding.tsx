@@ -2,15 +2,36 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Check, Heart } from "lucide-react";
 import { SERVICES } from "../../lib/services";
-import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { useMeta } from "../../hooks/useMeta";
+import { useStructuredData } from "../../hooks/useStructuredData";
+import { buildFaqSchema, buildServiceSchema, SITE_ORIGIN } from "../../lib/seo";
 import { useAuthStore } from "../../store/authStore";
 
 export const ServiceLanding = () => {
   const { slug } = useParams<{ slug: string }>();
   const service = SERVICES.find((s) => s.slug === slug);
   const isAuthed = useAuthStore((s) => !!s.accessToken);
-  // Hook MUST run unconditionally — pass undefined when no service.
-  useDocumentTitle(service?.title);
+  // Hooks MUST run unconditionally — pass null when no service.
+  useMeta({
+    title: service?.eyebrow ?? null,
+    description: service?.tagline,
+    canonical: service ? `/servicios/${service.slug}` : undefined,
+  });
+  useStructuredData(
+    service
+      ? [
+          buildServiceSchema({
+            name: service.eyebrow,
+            description: service.tagline,
+            url: `${SITE_ORIGIN}/servicios/${service.slug}`,
+            serviceType: service.eyebrow,
+          }),
+          buildFaqSchema(
+            service.faqs.map((f) => ({ question: f.q, answer: f.a }))
+          ),
+        ]
+      : []
+  );
 
   if (!service) return <Navigate to="/" replace />;
 

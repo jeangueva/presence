@@ -7,7 +7,9 @@ import {
   Mail,
   MessageCircle,
 } from "lucide-react";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useMeta } from "../hooks/useMeta";
+import { useStructuredData } from "../hooks/useStructuredData";
+import { buildFaqSchema } from "../lib/seo";
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -37,7 +39,15 @@ const FAQS: { q: string; a: string }[] = [
 ];
 
 export const Help = () => {
-  useDocumentTitle("Centro de ayuda");
+  useMeta({
+    title: "Centro de ayuda",
+    description:
+      "Respuestas a preguntas frecuentes sobre Memory Vaults, memoriales, mensajes póstumos, pagos y privacidad en Presence.",
+    canonical: "/help",
+  });
+  useStructuredData(
+    buildFaqSchema(FAQS.map((f) => ({ question: f.q, answer: f.a })))
+  );
   return (
     <div className="min-h-screen bg-white text-warm-plum">
       <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">

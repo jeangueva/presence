@@ -30,6 +30,12 @@ router.get("/estate/assets", asyncHandler(c.assetsList));
 router.post("/estate/assets", asyncHandler(c.assetsCreate));
 router.delete("/estate/assets/:id", asyncHandler(c.assetsDelete));
 
+// Digital will (capstone document + integrity seal)
+router.get("/will", asyncHandler(c.willGet));
+router.put("/will", asyncHandler(c.willSave));
+router.get("/will/document", asyncHandler(c.willDocument));
+router.post("/will/seal", asyncHandler(c.willSeal));
+
 // Posthumous messages
 router.get("/posthumous-messages", asyncHandler(c.posthumousList));
 router.post("/posthumous-messages", asyncHandler(c.posthumousCreate));

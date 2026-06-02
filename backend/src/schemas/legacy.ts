@@ -54,6 +54,13 @@ export const assetSchema = z.object({
   location: z.string().max(500).optional(),
 });
 
+export const willSchema = z.object({
+  testator_full_name: z.string().max(255).optional().nullable(),
+  testator_id_number: z.string().max(100).optional().nullable(),
+  city: z.string().max(255).optional().nullable(),
+  declarations: z.string().max(20_000).optional().nullable(),
+});
+
 export const posthumousMessageSchema = z.object({
   recipient_email: z.string().email(),
   subject: z.string().min(1).max(255),

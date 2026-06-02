@@ -7,8 +7,10 @@ import {
   heirSchema,
   petSchema,
   posthumousMessageSchema,
+  willSchema,
 } from "../schemas/legacy.js";
 import {
+  buildWillDocument,
   createAsset,
   createDependent,
   createHeir,
@@ -21,13 +23,16 @@ import {
   deletePosthumousMessage,
   getEstate,
   getFinalWishes,
+  getWill,
   listAssets,
   listDependents,
   listHeirs,
   listPets,
   listPosthumousMessages,
+  sealWill,
   upsertEstate,
   upsertFinalWishes,
+  upsertWill,
 } from "../services/legacyService.js";
 import { unauthorized } from "../utils/errors.js";
 
@@ -116,6 +121,25 @@ export const assetsDelete = async (req: Request, res: Response) => {
   const user = getUser(req);
   await deleteAsset(user.id, req.params.id);
   res.status(204).send();
+};
+
+// Digital will
+export const willGet = async (req: Request, res: Response) => {
+  const user = getUser(req);
+  res.json(await getWill(user.id));
+};
+export const willSave = async (req: Request, res: Response) => {
+  const user = getUser(req);
+  const body = willSchema.parse(req.body);
+  res.json(await upsertWill(user.id, body));
+};
+export const willDocument = async (req: Request, res: Response) => {
+  const user = getUser(req);
+  res.json(await buildWillDocument(user.id));
+};
+export const willSeal = async (req: Request, res: Response) => {
+  const user = getUser(req);
+  res.json(await sealWill(user.id));
 };
 
 // Posthumous messages

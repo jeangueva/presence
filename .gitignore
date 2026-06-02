@@ -45,3 +45,4 @@ coverage/
 
 # Claude / agent local artifacts
 .claude/cache/
+.claude/settings.local.json

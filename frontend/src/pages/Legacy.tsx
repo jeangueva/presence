@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,7 +19,12 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { api } from "../lib/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { WillStudio } from "../components/WillStudio";
+
+// Lazy: the will studio pulls in TipTap (~450 KB). Keep it out of the initial
+// bundle — it loads only when the user opens the Testamento Digital section.
+const WillStudio = lazy(() =>
+  import("../components/WillStudio").then((m) => ({ default: m.WillStudio }))
+);
 
 type TabKey = "dependents" | "pets" | "wishes" | "estate" | "messages" | "will";
 
@@ -261,7 +266,13 @@ export const Legacy = () => {
             {section === "wishes" && <WishesTab />}
             {section === "estate" && <EstateTab />}
             {section === "messages" && <MessagesTab />}
-            {section === "will" && <WillStudio />}
+            {section === "will" && (
+              <Suspense
+                fallback={<div className="h-64 bg-warm-fog rounded-2xl animate-pulse" />}
+              >
+                <WillStudio />
+              </Suspense>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

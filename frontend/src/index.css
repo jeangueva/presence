@@ -109,3 +109,21 @@
   .polaroid:hover,
   .polaroid:nth-child(2n):hover { transform: none; }
 }
+
+/* Digital-will rich document (TipTap) — restore document semantics that
+   Tailwind preflight strips, scoped so it only affects the will editor/preview. */
+.will-doc:focus-within { outline: none; }
+.will-doc .ProseMirror { outline: none; min-height: 340px; }
+.will-doc h1 { font-family: ui-serif, Georgia, serif; font-size: 1.9rem; line-height: 1.2; color: #211922; margin: 0.6em 0 0.3em; }
+.will-doc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #7e238b; margin: 1.4em 0 0.4em; }
+.will-doc p { margin: 0.5em 0; line-height: 1.65; color: #211922; }
+.will-doc ul { list-style: disc; padding-left: 1.4em; margin: 0.5em 0; }
+.will-doc ol { list-style: decimal; padding-left: 1.4em; margin: 0.5em 0; }
+.will-doc li { margin: 0.25em 0; }
+.will-doc strong { font-weight: 700; }
+.will-doc em { font-style: italic; }
+.will-doc u { text-decoration: underline; }
+.will-doc img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; }
+.will-doc .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder); color: #91918c; float: left; height: 0; pointer-events: none;
+}

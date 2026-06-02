@@ -59,6 +59,9 @@ export const willSchema = z.object({
   testator_id_number: z.string().max(100).optional().nullable(),
   city: z.string().max(255).optional().nullable(),
   declarations: z.string().max(20_000).optional().nullable(),
+  // Rich authored document (HTML). Generous cap: inline base64 images/signature.
+  body_html: z.string().max(5_000_000).optional().nullable(),
+  template_id: z.string().max(50).optional().nullable(),
 });
 
 export const posthumousMessageSchema = z.object({

@@ -248,77 +248,27 @@ export const upsertWill = async (userId: string, input: Record<string, unknown>)
   return data;
 };
 
-// Deterministic stringify: stable key order so the hash is reproducible.
-const stableStringify = (value: unknown): string => {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (value && typeof value === "object") {
-    const keys = Object.keys(value as Record<string, unknown>).sort();
-    return `{${keys
-      .map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value ?? null);
-};
-
-const pick = (row: Record<string, unknown> | null, keys: string[]) => {
-  const out: Record<string, unknown> = {};
-  if (!row) return out;
-  for (const k of keys) out[k] = row[k] ?? null;
-  return out;
-};
-
 /**
- * Assemble the full will document by aggregating every estate-plan source.
- * The `content` block is exactly what gets hashed on seal; `seal` and
- * `generated_at` are metadata and excluded from the hash.
+ * The will is a free-form authored HTML document. The seal hashes that
+ * document (body_html) so any later edit — text, image or signature —
+ * changes the fingerprint. `seal.valid` is recomputed live against the
+ * current body so a stale seal never looks valid.
  */
 export const buildWillDocument = async (userId: string) => {
-  const [will, estate, heirs, assets, wishes, dependents] = await Promise.all([
-    getWill(userId),
-    getEstate(userId),
-    listHeirs(userId),
-    listAssets(userId),
-    getFinalWishes(userId),
-    listDependents(userId),
-  ]);
-
-  const content = {
-    testator: pick(will, ["testator_full_name", "testator_id_number", "city"]),
-    declarations: will?.declarations ?? null,
-    executor: pick(estate, ["executor_name", "executor_email", "executor_phone"]),
-    estate_summary: estate?.summary ?? null,
-    notary_info: estate?.notary_info ?? null,
-    heirs: (heirs ?? []).map((h) =>
-      pick(h, ["full_name", "email", "relationship", "inheritance_share", "notes"])
-    ),
-    assets: (assets ?? []).map((a) =>
-      pick(a, ["name", "asset_type", "approximate_value", "location", "description"])
-    ),
-    final_wishes: pick(wishes, [
-      "disposition",
-      "ceremony_notes",
-      "religious_wishes",
-      "music_readings",
-      "obituary",
-      "special_requests",
-    ]),
-    dependents: (dependents ?? []).map((d) =>
-      pick(d, ["full_name", "relationship", "caregiver_name", "caregiver_contact", "notes"])
-    ),
-  };
-
-  const contentHash = createHash("sha256").update(stableStringify(content)).digest("hex");
+  const will = await getWill(userId);
+  const body = will?.body_html ?? "";
+  const contentHash = createHash("sha256").update(body).digest("hex");
 
   return {
-    content,
+    body_html: body,
+    template_id: will?.template_id ?? null,
     content_hash: contentHash,
     seal: {
       status: will?.status ?? "draft",
       document_hash: will?.document_hash ?? null,
       document_version: will?.document_version ?? 0,
       sealed_at: will?.sealed_at ?? null,
-      // True only when a seal exists AND the live content still matches it.
-      valid: !!will?.document_hash && will?.document_hash === contentHash,
+      valid: !!body && !!will?.document_hash && will?.document_hash === contentHash,
     },
     generated_at: new Date().toISOString(),
   };

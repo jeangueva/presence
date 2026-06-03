@@ -13,6 +13,7 @@ import billingRoutes from "./routes/billing.js";
 import legacyRoutes from "./routes/legacy.js";
 import adminRoutes from "./routes/admin.js";
 import ogRoutes from "./routes/og.js";
+import betaRoutes from "./routes/beta.js";
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/billing", billingRoutes);
 app.use("/legacy", legacyRoutes);
 app.use("/admin", adminRoutes);
 app.use("/og", ogRoutes);
+app.use("/beta", betaRoutes);
 
 app.use(errorHandler);
 

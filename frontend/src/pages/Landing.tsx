@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
@@ -11,7 +11,12 @@ import {
   Trash2,
   ArrowRight,
   Sparkles,
+  Mail,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
+import { AxiosError } from "axios";
+import { api } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { SERVICES as SERVICES_LIST } from "../lib/services";
 import { useMeta } from "../hooks/useMeta";
@@ -326,6 +331,156 @@ const StepConnector = () => (
   </svg>
 );
 
+// ---------------- beta waitlist (fake door) ----------------
+const BetaWaitlist = () => {
+  const reduce = useReducedMotion();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
+    "idle"
+  );
+  const [message, setMessage] = useState("");
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (status === "loading") return;
+    setStatus("loading");
+    setMessage("");
+    try {
+      // Capture campaign attribution so we can tell which social post converted.
+      const utm = window.location.search ? window.location.search.slice(1) : undefined;
+      const { data } = await api.post("/beta/signup", {
+        full_name: fullName,
+        email,
+        source: "landing",
+        utm,
+      });
+      setStatus("done");
+      setMessage(data?.message ?? "¡Estás en la lista!");
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ details?: Record<string, string[]> }>;
+      const fieldErr =
+        axiosErr.response?.data?.details?.email?.[0] ??
+        axiosErr.response?.data?.details?.full_name?.[0];
+      setStatus("error");
+      setMessage(
+        fieldErr ?? "No pudimos guardarte ahora. Revisa tus datos e intenta de nuevo."
+      );
+    }
+  };
+
+  return (
+    <section id="beta" className="px-6 py-20 sm:py-28 bg-warm-fog">
+      <FadeIn>
+        <div className="relative max-w-3xl mx-auto bg-warm-plum text-white rounded-[40px] p-10 sm:p-14 overflow-hidden">
+          <motion.div
+            aria-hidden
+            className="absolute -top-20 -right-16 w-72 h-72 rounded-full bg-warm-accent/20 blur-3xl"
+            animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.6, 0.4] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <div className="relative">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-light/80 mb-4 flex items-center gap-2">
+              <Sparkles size={14} />
+              Acceso anticipado · cupos limitados
+            </p>
+            <h2 className="font-serif text-3xl sm:text-4xl mb-4 tracking-tight">
+              Sé de los primeros en probar Presence.
+            </h2>
+            <p className="text-warm-light text-base sm:text-lg max-w-xl mb-8 leading-relaxed">
+              Estamos abriendo la beta privada a un grupo pequeño de early adopters.
+              Déjanos tu nombre y tu correo de Google y te escribiremos en cuanto
+              tengamos tu lugar listo.
+            </p>
+
+            {status === "done" ? (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 bg-white/10 rounded-2xl p-5"
+              >
+                <CheckCircle2 className="shrink-0 text-warm-accent mt-0.5" size={24} />
+                <div>
+                  <p className="font-semibold text-white">¡Listo, {fullName.split(" ")[0]}!</p>
+                  <p className="text-warm-light text-sm mt-1">{message}</p>
+                </div>
+              </motion.div>
+            ) : (
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="beta-name" className="sr-only">
+                      Nombre completo
+                    </label>
+                    <input
+                      id="beta-name"
+                      type="text"
+                      required
+                      autoComplete="name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Nombre completo"
+                      className="w-full bg-white/95 text-warm-plum placeholder:text-warm-silver rounded-2xl px-5 py-3.5 outline-none focus:ring-2 focus:ring-warm-accent transition"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label htmlFor="beta-email" className="sr-only">
+                      Correo de Google
+                    </label>
+                    <Mail
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-silver pointer-events-none"
+                    />
+                    <input
+                      id="beta-email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tucorreo@gmail.com"
+                      className="w-full bg-white/95 text-warm-plum placeholder:text-warm-silver rounded-2xl pl-11 pr-5 py-3.5 outline-none focus:ring-2 focus:ring-warm-accent transition"
+                    />
+                  </div>
+                </div>
+
+                {status === "error" && (
+                  <p className="text-sm text-warm-accent bg-white/10 rounded-xl px-4 py-2.5">
+                    {message}
+                  </p>
+                )}
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <button
+                    type="submit"
+                    disabled={status === "loading"}
+                    className="group inline-flex items-center justify-center gap-2 bg-warm-accent hover:bg-warm-accent-hover disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold px-7 py-3.5 rounded-2xl transition shadow-lg hover:shadow-xl"
+                  >
+                    {status === "loading" ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Guardando…
+                      </>
+                    ) : (
+                      <>
+                        Quiero mi acceso
+                        <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-warm-light/70 max-w-xs">
+                    Sin spam. Solo te escribimos para tu invitación a la beta.
+                  </p>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </FadeIn>
+    </section>
+  );
+};
+
 // ---------------- main ----------------
 export const Landing = () => {
   const navigate = useNavigate();
@@ -410,11 +565,11 @@ export const Landing = () => {
               te importan.
             </motion.p>
             <motion.div variants={item} className="flex flex-wrap gap-3">
-              <Link
-                to="/register"
+              <a
+                href="#beta"
                 className="group inline-flex items-center gap-2 bg-warm-accent hover:bg-warm-accent-hover text-white font-bold px-6 py-3 rounded-2xl transition shadow-sm hover:shadow-lg"
               >
-                Crear una memoria
+                Únete a la beta privada
                 <motion.span
                   className="inline-block"
                   whileHover={{ x: 4 }}
@@ -422,7 +577,7 @@ export const Landing = () => {
                 >
                   <ArrowRight size={18} />
                 </motion.span>
-              </Link>
+              </a>
               <a
                 href="#como-funciona"
                 className="inline-flex items-center bg-warm-sand hover:bg-warm-light text-warm-plum font-semibold px-6 py-3 rounded-2xl transition"
@@ -431,7 +586,7 @@ export const Landing = () => {
               </a>
             </motion.div>
             <motion.p variants={item} className="text-xs text-warm-silver mt-6">
-              Sin tarjeta de crédito. Empieza a construir tu primer Memory Vault hoy.
+              Acceso anticipado gratuito · cupos limitados para early adopters.
             </motion.p>
           </div>
 
@@ -440,6 +595,9 @@ export const Landing = () => {
           </motion.div>
         </motion.div>
       </section>
+
+      {/* BETA WAITLIST (fake door) */}
+      <BetaWaitlist />
 
       {/* DIVIDER */}
       <hr className="border-warm-sand" />
@@ -666,20 +824,20 @@ export const Landing = () => {
             />
             <div className="relative">
               <h2 className="font-serif text-4xl sm:text-5xl mb-5 tracking-tight">
-                Empieza hoy.
+                Asegura tu lugar.
               </h2>
               <p className="text-warm-light text-lg max-w-xl mx-auto mb-8 leading-relaxed">
-                Cada día sin documentar es un detalle que se diluye. Construye el primer
-                Memory Vault en menos de cinco minutos.
+                La beta privada abre con cupos limitados. Déjanos tus datos y serás de
+                los primeros en construir tu primer Memory Vault.
               </p>
               <div className="flex flex-wrap gap-3 justify-center">
-                <Link
-                  to="/register"
+                <a
+                  href="#beta"
                   className="inline-flex items-center gap-2 bg-warm-accent hover:bg-warm-accent-hover text-white font-bold px-7 py-3.5 rounded-2xl transition shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform duration-200"
                 >
-                  Crear cuenta gratis
+                  Quiero mi acceso anticipado
                   <ArrowRight size={18} />
-                </Link>
+                </a>
                 <Link
                   to="/login"
                   className="inline-flex items-center bg-white/10 hover:bg-white/20 text-white font-semibold px-7 py-3.5 rounded-2xl transition"

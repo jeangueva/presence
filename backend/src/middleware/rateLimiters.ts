@@ -62,3 +62,11 @@ export const guestbookLimiter = rateLimit({
   legacyHeaders: false,
   message: tooManyRequests("Has dejado varios mensajes. Espera una hora antes de otro."),
 });
+
+export const betaSignupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: tooManyRequests("Demasiados registros desde esta IP. Intenta en una hora."),
+});

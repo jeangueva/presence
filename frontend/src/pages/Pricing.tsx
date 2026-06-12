@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, Heart, Sparkles, X } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { PLAN_ORDER, PLANS, type PlanId } from "../lib/plans";
@@ -57,9 +57,8 @@ export const Pricing = () => {
       {/* Header simple */}
       <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="text-2xl font-serif text-warm-plum inline-flex items-center gap-2">
-            <Heart size={20} className="text-warm-accent" fill="currentColor" />
-            Presence
+          <Link to="/" className="text-2xl font-serif tracking-tight text-warm-plum">
+            Presence<sup className="text-xs">®</sup>
           </Link>
           <div className="flex items-center gap-3">
             {!isAuthed ? (

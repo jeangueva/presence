@@ -29,7 +29,7 @@ export const SignaturePad = ({
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#211922";
+    ctx.strokeStyle = "#000000";
   }, []);
 
   const pos = (e: React.PointerEvent<HTMLCanvasElement>) => {

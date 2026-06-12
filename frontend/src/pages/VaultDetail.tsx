@@ -384,7 +384,7 @@ export const VaultDetail = () => {
             translateX: "-50%",
             translateY: "-50%",
             background:
-              "radial-gradient(circle, rgba(126, 35, 139, 0.18) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(0, 0, 0, 0.08) 0%, transparent 70%)",
             filter: "blur(40px)",
           }}
         />

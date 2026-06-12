@@ -46,8 +46,8 @@ export const UploadZone = ({ vaultId, onUploaded, onQuotaExceeded }: Props) => {
   return (
     <motion.div
       animate={{
-        borderColor: dragOver ? "#7e238b" : "#e5e5e0",
-        backgroundColor: dragOver ? "rgba(126, 35, 139, 0.05)" : "transparent",
+        borderColor: dragOver ? "#000000" : "#E8E8E8",
+        backgroundColor: dragOver ? "rgba(0, 0, 0, 0.03)" : "transparent",
       }}
       transition={{ duration: 0.2 }}
       className="border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer hover:bg-warm-fog/40 transition"

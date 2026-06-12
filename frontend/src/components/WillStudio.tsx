@@ -63,14 +63,14 @@ const printDocument = (html: string, doc: WillDoc | undefined) => {
   if (!win) return;
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
 <title>Testamento Digital</title><style>
-  body { font-family: Georgia, 'Times New Roman', serif; color:#211922; max-width:760px; margin:40px auto; padding:0 24px; line-height:1.65; }
-  h1 { font-size:26px; border-bottom:2px solid #7e238b; padding-bottom:8px; }
-  h2 { font-size:14px; text-transform:uppercase; letter-spacing:1px; color:#7e238b; margin-top:24px; }
+  body { font-family: Georgia, 'Times New Roman', serif; color:#000000; max-width:760px; margin:40px auto; padding:0 24px; line-height:1.65; }
+  h1 { font-size:26px; border-bottom:2px solid #000000; padding-bottom:8px; }
+  h2 { font-size:14px; text-transform:uppercase; letter-spacing:1px; color:#6F6F6F; margin-top:24px; }
   ul,ol { padding-left:22px; } li { margin:6px 0; }
   img { max-width:100%; height:auto; }
-  .seal { margin-top:40px; border:1px solid #e5e5e0; border-radius:10px; padding:16px; background:#faf9f7; font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:#62625b; }
-  .seal code { word-break:break-all; color:#211922; }
-  .disclaimer { margin-top:12px; font-size:11px; color:#91918c; }
+  .seal { margin-top:40px; border:1px solid #E8E8E8; border-radius:10px; padding:16px; background:#FAFAFA; font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:#6F6F6F; }
+  .seal code { word-break:break-all; color:#000000; }
+  .disclaimer { margin-top:12px; font-size:11px; color:#A3A3A3; }
 </style></head><body>
 ${clean}
 <div class="seal"><strong>Sello de integridad</strong><br/>

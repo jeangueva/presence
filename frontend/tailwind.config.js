@@ -5,31 +5,31 @@ export default {
     extend: {
       colors: {
         presence: {
-          50: "#f5f7fb",
-          100: "#e7ecf5",
-          500: "#5b6bbf",
-          600: "#4a58a8",
-          700: "#3a4688",
-          900: "#1e2650",
+          50: "#fafafa",
+          100: "#f2f2f2",
+          500: "#404040",
+          600: "#262626",
+          700: "#171717",
+          900: "#000000",
         },
-        // Warm palette inspired by Pinterest design system
-        // Used by the public landing page (and future marketing surfaces).
+        // Monochrome editorial palette — cinematic black/white/gray.
+        // Semantic names kept so every surface restyles without renaming.
         warm: {
-          // Brand accent — semantic name so the hue can shift without renaming.
-          // Currently: deep magenta-purple, fits the contemplative legacy tone.
-          accent: "#7e238b",
-          "accent-hover": "#5e1a6a",
-          plum: "#211922",
-          olive: "#62625b",
-          silver: "#91918c",
-          sand: "#e5e5e0",
-          light: "#e0e0d9",
-          fog: "#f6f6f3",
-          dark: "#33332e",
+          // Brand accent — pure black in the monochrome system.
+          accent: "#000000",
+          "accent-hover": "#2b2b2b",
+          plum: "#000000", // primary text / headings
+          olive: "#6F6F6F", // secondary text, descriptions, menu items
+          silver: "#A3A3A3", // tertiary text, placeholders
+          sand: "#E8E8E8", // hairline borders
+          light: "#F2F2F2", // subtle fills
+          fog: "#FAFAFA", // section backgrounds
+          dark: "#000000", // footers, inverted surfaces
         },
       },
       fontFamily: {
-        serif: ["Cormorant Garamond", "Georgia", "serif"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        serif: ["Instrument Serif", "Georgia", "serif"],
       },
     },
   },

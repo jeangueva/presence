@@ -194,7 +194,7 @@ export const WillEditor = ({
         >
           <span
             className="w-4 h-4 rounded-full border border-warm-sand"
-            style={{ background: editor.getAttributes("textStyle").color || "#211922" }}
+            style={{ background: editor.getAttributes("textStyle").color || "#000000" }}
           />
           <input
             type="color"

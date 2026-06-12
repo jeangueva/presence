@@ -1,6 +1,6 @@
 import { Link, useParams, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Heart } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { SERVICES } from "../../lib/services";
 import { useMeta } from "../../hooks/useMeta";
 import { useStructuredData } from "../../hooks/useStructuredData";
@@ -42,9 +42,8 @@ export const ServiceLanding = () => {
     <div className="min-h-screen bg-white text-warm-plum">
       <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="text-2xl font-serif text-warm-plum inline-flex items-center gap-2">
-            <Heart size={20} className="text-warm-accent" fill="currentColor" />
-            Presence
+          <Link to="/" className="text-2xl font-serif tracking-tight text-warm-plum">
+            Presence<sup className="text-xs">®</sup>
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/pricing" className="text-sm font-semibold text-warm-olive hover:text-warm-plum">
@@ -164,7 +163,7 @@ export const ServiceLanding = () => {
           </p>
           <Link
             to={ctaHref}
-            className="inline-flex items-center gap-2 bg-warm-accent hover:bg-warm-accent-hover text-white font-bold px-7 py-3.5 rounded-2xl transition shadow-lg"
+            className="inline-flex items-center gap-2 bg-white text-black font-medium px-8 py-3.5 rounded-full transition-transform duration-200 hover:scale-[1.03]"
           >
             {isAuthed ? "Ir a mi plan" : "Crear cuenta gratis"}
             <ArrowRight size={18} />

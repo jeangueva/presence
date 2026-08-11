@@ -13,7 +13,7 @@ export const LegalLayout = ({
   lastUpdated: string;
   children: ReactNode;
 }) => (
-  <div className="min-h-screen bg-white text-warm-plum">
+  <div className="min-h-screen bg-white text-warm-plum animate-page-fade">
     <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
         <Link to="/" className="text-2xl font-serif text-warm-plum inline-flex items-center gap-2">
@@ -28,7 +28,7 @@ export const LegalLayout = ({
       </div>
     </nav>
     <article className="max-w-3xl mx-auto px-6 py-16">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+      <p className="eyebrow mb-3">
         {eyebrow}
       </p>
       <h1 className="font-serif text-5xl text-warm-plum mb-3">{title}</h1>

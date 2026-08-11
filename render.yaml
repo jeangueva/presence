@@ -45,16 +45,26 @@ services:
       - key: EMAIL_FROM
         sync: false
 
+      # App Checkout API — Legado (pago único, via Bricks)
       - key: MERCADOPAGO_ACCESS_TOKEN
         sync: false
       - key: MERCADOPAGO_WEBHOOK_SECRET
         sync: false
+      # Public key de la app Checkout API — la usa el Payment Brick en el navegador.
+      - key: MERCADOPAGO_PUBLIC_KEY
+        sync: false
+      # App Suscripciones (Vault IA, mensual). Vacías = reutiliza las de arriba.
+      - key: MERCADOPAGO_SUBSCRIPTION_ACCESS_TOKEN
+        sync: false
+      - key: MERCADOPAGO_SUBSCRIPTION_WEBHOOK_SECRET
+        sync: false
       - key: MERCADOPAGO_CURRENCY
         value: COP
-      - key: MERCADOPAGO_PRICE_PERSONAL
-        value: "36000"
-      - key: MERCADOPAGO_PRICE_FAMILY
-        value: "76000"
+      # Legado is a one-time charge, Vault a monthly one. Local currency.
+      - key: MERCADOPAGO_PRICE_LEGADO
+        value: "396000"
+      - key: MERCADOPAGO_PRICE_VAULT
+        value: "48000"
 
       # FRONTEND_URL = tu URL de Cloudflare Pages (sin slash final).
       # BACKEND_PUBLIC_URL = la URL pública que Render le da a este service.
@@ -73,3 +83,50 @@ services:
         value: "60000"
       - key: RATE_LIMIT_MAX
         value: "100"
+
+  # ---------------------------------------------------------------------------
+  # El cron del dead-man's switch vive en Cloudflare Workers, no aquí:
+  # los cron jobs de Render no están en el free tier, y un Cron Trigger de
+  # Cloudflare es gratis y solo necesita hacer un fetch.
+  #
+  #   cd workers/deadman-cron && npm run deploy
+  #
+  # Si prefieres tenerlo en Render (requiere plan de pago), descomenta esto:
+  # ---------------------------------------------------------------------------
+#  # Daily sweep of the dead-man's switch: sends due check-ins and, for users
+#  # who stayed silent through their whole grace window, asks their trusted
+#  # contacts. Idempotent, so a missed or doubled run is harmless.
+#  #
+#  # Runs the service in-process rather than calling the API, so it works even
+#  # when the free-tier web service is asleep and fails loudly (non-zero exit)
+#  # instead of returning a 200 with an error inside.
+#  #
+#  # 12:00 UTC ≈ 7am Bogotá / 9am Buenos Aires / 2pm Madrid — a check-in email
+#  # asking "¿sigues por aquí?" should not arrive in the middle of the night.
+#  - type: cron
+#    name: presence-deadman-sweep
+#    runtime: node
+#    plan: free
+#    rootDir: backend
+#    schedule: "0 12 * * *"
+#    buildCommand: npm install && npm run build
+#    startCommand: npm run deadman:sweep
+#    envVars:
+#      # Same config as the web service — env.ts validates all of these at boot.
+#      - key: NODE_ENV
+#        value: production
+#      - key: JWT_SECRET
+#        sync: false
+#      - key: SUPABASE_URL
+#        sync: false
+#      - key: SUPABASE_SERVICE_ROLE_KEY
+#        sync: false
+#      - key: ANTHROPIC_API_KEY
+#        sync: false
+#      # Used to build the "estoy bien" link inside the check-in email.
+#      - key: FRONTEND_URL
+#        sync: false
+#      - key: RESEND_API_KEY
+#        sync: false
+#      - key: EMAIL_FROM
+#        sync: false

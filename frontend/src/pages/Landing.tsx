@@ -38,13 +38,16 @@ const pillars = [
   },
   {
     n: "03",
-    title: "Legacy Planner",
-    desc: "Mensajes, audios y videos programados para fechas futuras — cumpleaños, graduaciones, momentos clave.",
+    title: "Mensajes póstumos",
+    desc: "Cartas escritas hoy, entregadas cuando dejes de responder a nuestro check-in y tus contactos de confianza lo confirmen.",
   },
   {
     n: "04",
     title: "Testamento Digital",
-    desc: "Documento legal generado y sellado con integridad criptográfica — cuentas, herederos, instrucciones finales.",
+    // No decir "documento legal": sin notario no lo es, y prometerlo es un
+    // pasivo. Lo que sí entregamos es el documento compilado y el sello de
+    // integridad — eso es verdad y sigue siendo valioso.
+    desc: "Tu voluntad compilada en un documento y sellada con integridad criptográfica — cuentas, herederos, instrucciones finales.",
   },
 ];
 
@@ -158,7 +161,11 @@ const HeroVideo = () => {
   return (
     <div
       className="absolute z-0 pointer-events-none"
-      style={{ top: "300px", inset: "auto 0 0 0" }}
+      // Longhands, not `inset: "auto 0 0 0"` — the shorthand resets `top` to
+      // auto no matter which order the two are declared in, which collapsed
+      // this box onto the video's intrinsic 300x150 placeholder at the foot of
+      // the viewport. The footage must run from y=300 to the bottom of the fold.
+      style={{ top: "300px", right: 0, bottom: 0, left: 0 }}
       aria-hidden
     >
       <video
@@ -169,9 +176,20 @@ const HeroVideo = () => {
         autoPlay
         preload="auto"
         className="w-full h-full object-cover"
-        style={{ opacity: 0, transition: "opacity 0.2s linear" }}
+        // Desaturated so the footage belongs to the monochrome system — the
+        // source clip is a saturated green landscape, which read as a stray
+        // image dropped onto the page rather than the page's own background.
+        style={{
+          opacity: 0,
+          transition: "opacity 0.2s linear",
+          filter: "grayscale(1) contrast(0.9)",
+        }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white" />
+      {/* The hero copy sits over the top third of this video. A fully
+          transparent midpoint left the #6F6F6F description and #A3A3A3 fine
+          print illegible, so the wash holds ~55% white through the middle —
+          enough for the footage to read, enough for the type to stay on spec. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-canvas via-canvas/55 to-canvas" />
     </div>
   );
 };
@@ -218,7 +236,7 @@ const BetaWaitlist = () => {
     <section id="beta" className="px-6 py-24 sm:py-32">
       <FadeIn>
         <div className="max-w-3xl mx-auto bg-black text-white rounded-[40px] p-10 sm:p-14">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/50 mb-6">
+          <p className="eyebrow text-white/50 mb-6">
             Acceso anticipado · cupos limitados
           </p>
           <h2 className="font-serif text-4xl sm:text-5xl mb-4 leading-[1.05]">
@@ -260,7 +278,7 @@ const BetaWaitlist = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Nombre completo"
-                    className="w-full bg-white text-black placeholder:text-[#A3A3A3] rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-white/40 transition"
+                    className="w-full bg-white text-black placeholder:text-warm-silver rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-white/40 transition"
                   />
                 </div>
                 <div className="relative">
@@ -269,7 +287,7 @@ const BetaWaitlist = () => {
                   </label>
                   <Mail
                     size={18}
-                    className="absolute left-5 top-1/2 -translate-y-1/2 text-[#A3A3A3] pointer-events-none"
+                    className="absolute left-5 top-1/2 -translate-y-1/2 text-warm-silver pointer-events-none"
                   />
                   <input
                     id="beta-email"
@@ -279,7 +297,7 @@ const BetaWaitlist = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="tucorreo@gmail.com"
-                    className="w-full bg-white text-black placeholder:text-[#A3A3A3] rounded-full pl-12 pr-6 py-3.5 outline-none focus:ring-2 focus:ring-white/40 transition"
+                    className="w-full bg-white text-black placeholder:text-warm-silver rounded-full pl-12 pr-6 py-3.5 outline-none focus:ring-2 focus:ring-white/40 transition"
                   />
                 </div>
               </div>
@@ -348,41 +366,41 @@ export const Landing = () => {
         {/* NAV */}
         <nav className="relative z-10">
           <div className="max-w-7xl mx-auto flex justify-between items-center px-8 py-6">
-            <Link to="/" className="font-serif text-3xl tracking-tight text-black">
+            <Link to="/" className="font-serif text-3xl tracking-tight text-warm-plum">
               Presence<sup className="text-sm">®</sup>
             </Link>
             <div className="hidden md:flex items-center gap-8">
-              <Link to="/" className="text-sm text-black transition-colors">
+              <Link to="/" className="text-sm text-warm-plum transition-colors">
                 Inicio
               </Link>
               <a
                 href="#pilares"
-                className="text-sm text-[#6F6F6F] hover:text-black transition-colors"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
               >
                 Producto
               </a>
               <Link
                 to="/pricing"
-                className="text-sm text-[#6F6F6F] hover:text-black transition-colors"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
               >
                 Precios
               </Link>
               <Link
                 to="/help"
-                className="text-sm text-[#6F6F6F] hover:text-black transition-colors"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
               >
                 Ayuda
               </Link>
               <Link
                 to="/login"
-                className="text-sm text-[#6F6F6F] hover:text-black transition-colors"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
               >
                 Iniciar sesión
               </Link>
             </div>
             <a
               href="#beta"
-              className="rounded-full px-6 py-2.5 text-sm bg-black text-white transition-transform duration-200 hover:scale-[1.03]"
+              className="rounded-pill px-6 py-2.5 text-sm bg-warm-accent text-on-ink transition-transform duration-hover ease-cinematic hover:scale-lift"
             >
               Únete a la beta
             </a>
@@ -394,43 +412,43 @@ export const Landing = () => {
           className="relative z-10 flex flex-col items-center justify-center text-center px-6 pb-40"
           style={{ paddingTop: "calc(8rem - 75px)" }}
         >
-          <h1
-            className="animate-fade-rise font-serif font-normal text-5xl sm:text-7xl md:text-8xl max-w-7xl text-black"
-            style={{ lineHeight: 0.95, letterSpacing: "-2.46px" }}
-          >
-            Más allá del <em className="text-[#6F6F6F]">silencio,</em>
+          <h1 className="animate-fade-rise font-serif font-normal text-5xl sm:text-7xl md:text-8xl max-w-7xl text-warm-plum leading-display tracking-display">
+            Más allá del <em className="text-warm-olive">silencio,</em>
             <br />
-            la memoria sigue <em className="text-[#6F6F6F]">viva.</em>
+            la memoria sigue <em className="text-warm-olive">viva.</em>
           </h1>
-          <p className="animate-fade-rise-delay text-base sm:text-lg max-w-2xl mt-8 leading-relaxed text-[#6F6F6F]">
+          <p className="animate-fade-rise-delay text-base sm:text-lg max-w-2xl mt-8 leading-relaxed text-warm-olive">
             Presence convierte biografías, fotos y voces en una IA con la que
             puedes conversar — para honrar, recordar y mantener viva la
             presencia de quienes te importan.
           </p>
           <a
             href="#beta"
-            className="animate-fade-rise-delay-2 rounded-full px-14 py-5 text-base mt-12 bg-black text-white transition-transform duration-200 hover:scale-[1.03]"
+            className="animate-fade-rise-delay-2 rounded-pill px-14 py-5 text-base mt-12 bg-warm-accent text-on-ink transition-transform duration-hover ease-cinematic hover:scale-lift"
           >
             Únete a la beta
           </a>
-          <p className="animate-fade-rise-delay-2 text-xs text-[#A3A3A3] mt-6">
+          {/* Deliberately warm-olive rather than the warm-silver used for fine
+              print elsewhere: this line sits deepest into the video, where the
+              scrim is weakest, and #A3A3A3 disappeared against the footage. */}
+          <p className="animate-fade-rise-delay-3 text-xs text-warm-olive mt-6">
             Acceso anticipado gratuito · cupos limitados para early adopters.
           </p>
         </section>
       </div>
 
       {/* PILLARS */}
-      <section id="pilares" className="px-6 py-24 sm:py-32 border-t border-[#E8E8E8]">
+      <section id="pilares" className="px-6 py-24 sm:py-32 border-t border-warm-sand">
         <div className="max-w-7xl mx-auto">
           <FadeIn>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#A3A3A3] mb-4">
+            <p className="eyebrow mb-4">
               Cuatro pilares
             </p>
             <h2 className="font-serif text-4xl sm:text-6xl text-black max-w-3xl leading-[1.02]">
               Un legado completo,{" "}
-              <em className="text-[#6F6F6F]">construido con cuidado.</em>
+              <em className="text-warm-olive">construido con cuidado.</em>
             </h2>
-            <p className="text-[#6F6F6F] max-w-2xl mt-6 mb-16 text-lg leading-relaxed">
+            <p className="text-warm-olive max-w-2xl mt-6 mb-16 text-lg leading-relaxed">
               Dos para recordar a quienes ya no están, dos para preparar lo que
               tu familia necesitará. Todos disponibles hoy.
             </p>
@@ -440,11 +458,11 @@ export const Landing = () => {
             {pillars.map((p, i) => (
               <FadeIn key={p.title} delay={i * 0.08}>
                 <div className="border-t border-black pt-6 h-full">
-                  <p className="font-mono text-xs text-[#A3A3A3] mb-4">{p.n}</p>
+                  <p className="font-mono text-xs text-warm-silver mb-4">{p.n}</p>
                   <h3 className="font-serif text-2xl text-black mb-3">
                     {p.title}
                   </h3>
-                  <p className="text-sm text-[#6F6F6F] leading-relaxed">
+                  <p className="text-sm text-warm-olive leading-relaxed">
                     {p.desc}
                   </p>
                 </div>
@@ -457,26 +475,26 @@ export const Landing = () => {
       {/* HOW IT WORKS */}
       <section
         id="como-funciona"
-        className="px-6 py-24 sm:py-32 bg-[#FAFAFA] border-t border-[#E8E8E8]"
+        className="px-6 py-24 sm:py-32 bg-warm-fog border-t border-warm-sand"
       >
         <div className="max-w-7xl mx-auto">
           <FadeIn>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#A3A3A3] mb-4">
+            <p className="eyebrow mb-4">
               Cómo funciona
             </p>
             <h2 className="font-serif text-4xl sm:text-6xl text-black mb-16 leading-[1.02]">
-              Tres pasos <em className="text-[#6F6F6F]">para empezar.</em>
+              Tres pasos <em className="text-warm-olive">para empezar.</em>
             </h2>
           </FadeIn>
 
           <div className="grid md:grid-cols-3 gap-x-10 gap-y-12">
             {steps.map((s, i) => (
               <FadeIn key={s.n} delay={i * 0.1}>
-                <p className="font-serif text-6xl text-[#E8E8E8] mb-4 select-none">
+                <p className="font-serif text-6xl text-warm-sand mb-4 select-none">
                   {s.n}
                 </p>
                 <h3 className="font-serif text-2xl text-black mb-3">{s.title}</h3>
-                <p className="text-[#6F6F6F] leading-relaxed">{s.desc}</p>
+                <p className="text-warm-olive leading-relaxed">{s.desc}</p>
               </FadeIn>
             ))}
           </div>
@@ -484,40 +502,40 @@ export const Landing = () => {
       </section>
 
       {/* SERVICES — módulos de "Mi legado" */}
-      <section className="px-6 py-24 sm:py-32 border-t border-[#E8E8E8]">
+      <section className="px-6 py-24 sm:py-32 border-t border-warm-sand">
         <div className="max-w-7xl mx-auto">
           <FadeIn>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#A3A3A3] mb-4">
+            <p className="eyebrow mb-4">
               Servicios de planificación
             </p>
             <h2 className="font-serif text-4xl sm:text-6xl text-black max-w-3xl leading-[1.02]">
               Que quienes amas{" "}
-              <em className="text-[#6F6F6F]">no tengan que adivinar.</em>
+              <em className="text-warm-olive">no tengan que adivinar.</em>
             </h2>
-            <p className="text-[#6F6F6F] max-w-2xl mt-6 mb-16 text-lg leading-relaxed">
+            <p className="text-warm-olive max-w-2xl mt-6 mb-16 text-lg leading-relaxed">
               Planifica hoy lo que tu familia necesitará. Cada módulo se llena
               en minutos y se actualiza cuando quieras.
             </p>
           </FadeIn>
 
-          <div className="divide-y divide-[#E8E8E8] border-y border-[#E8E8E8]">
+          <div className="divide-y divide-[#E8E8E8] border-y border-warm-sand">
             {SERVICES_LIST.map((s, i) => (
               <FadeIn key={s.slug} delay={i * 0.05}>
                 <Link
                   to={`/servicios/${s.slug}`}
-                  className="group flex items-center justify-between gap-6 py-8 px-2 hover:bg-[#FAFAFA] transition-colors"
+                  className="group flex items-center justify-between gap-6 py-8 px-2 hover:bg-warm-fog transition-colors"
                 >
                   <div>
-                    <h3 className="font-serif text-2xl sm:text-3xl text-black group-hover:text-[#6F6F6F] transition-colors">
+                    <h3 className="font-serif text-2xl sm:text-3xl text-black group-hover:text-warm-olive transition-colors">
                       {s.eyebrow}
                     </h3>
-                    <p className="text-sm text-[#6F6F6F] leading-relaxed mt-2 max-w-2xl">
+                    <p className="text-sm text-warm-olive leading-relaxed mt-2 max-w-2xl">
                       {s.tagline}
                     </p>
                   </div>
                   <ArrowRight
                     size={24}
-                    className="shrink-0 text-[#A3A3A3] group-hover:text-black group-hover:translate-x-1 transition-all"
+                    className="shrink-0 text-warm-silver group-hover:text-black group-hover:translate-x-1 transition-all"
                   />
                 </Link>
               </FadeIn>
@@ -527,17 +545,17 @@ export const Landing = () => {
       </section>
 
       {/* TRUST */}
-      <section className="px-6 py-24 sm:py-32 bg-[#FAFAFA] border-t border-[#E8E8E8]">
+      <section className="px-6 py-24 sm:py-32 bg-warm-fog border-t border-warm-sand">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-start">
           <FadeIn className="lg:col-span-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#A3A3A3] mb-4">
+            <p className="eyebrow mb-4">
               Confianza y privacidad
             </p>
             <h2 className="font-serif text-4xl sm:text-6xl text-black leading-[1.02]">
               Tus recuerdos son{" "}
-              <em className="text-[#6F6F6F]">solo tuyos.</em>
+              <em className="text-warm-olive">solo tuyos.</em>
             </h2>
-            <p className="text-[#6F6F6F] mt-6 leading-relaxed">
+            <p className="text-warm-olive mt-6 leading-relaxed">
               Los archivos privados de quienes amas nunca se usan para entrenar
               modelos públicos. Construimos Presence con el respeto que esos
               recuerdos merecen.
@@ -554,7 +572,7 @@ export const Landing = () => {
                       <h3 className="font-serif text-xl text-black mb-1">
                         {t.title}
                       </h3>
-                      <p className="text-sm text-[#6F6F6F] leading-relaxed">
+                      <p className="text-sm text-warm-olive leading-relaxed">
                         {t.desc}
                       </p>
                     </div>
@@ -576,9 +594,9 @@ export const Landing = () => {
             className="font-serif text-5xl sm:text-7xl text-black leading-[0.98]"
             style={{ letterSpacing: "-1.5px" }}
           >
-            Asegura <em className="text-[#6F6F6F]">tu lugar.</em>
+            Asegura <em className="text-warm-olive">tu lugar.</em>
           </h2>
-          <p className="text-[#6F6F6F] text-lg max-w-xl mx-auto mt-6 leading-relaxed">
+          <p className="text-warm-olive text-lg max-w-xl mx-auto mt-6 leading-relaxed">
             La beta privada abre con cupos limitados. Serás de los primeros en
             construir tu Memory Vault.
           </p>
@@ -591,7 +609,7 @@ export const Landing = () => {
             </a>
             <Link
               to="/login"
-              className="rounded-full px-10 py-4 border border-[#E8E8E8] text-black hover:border-black transition-colors"
+              className="rounded-full px-10 py-4 border border-warm-sand text-black hover:border-black transition-colors"
             >
               Ya tengo cuenta
             </Link>
@@ -600,7 +618,7 @@ export const Landing = () => {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-black text-[#A3A3A3]">
+      <footer className="bg-black text-warm-silver">
         <div className="max-w-7xl mx-auto px-8 py-16">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
@@ -613,7 +631,7 @@ export const Landing = () => {
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-white mb-5">
+              <p className="eyebrow text-white mb-5">
                 Producto
               </p>
               <ul className="space-y-3 text-sm">
@@ -635,7 +653,7 @@ export const Landing = () => {
               </ul>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-white mb-5">
+              <p className="eyebrow text-white mb-5">
                 Legal
               </p>
               <ul className="space-y-3 text-sm">

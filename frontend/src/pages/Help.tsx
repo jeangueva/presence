@@ -49,7 +49,7 @@ export const Help = () => {
     buildFaqSchema(FAQS.map((f) => ({ question: f.q, answer: f.a })))
   );
   return (
-    <div className="min-h-screen bg-white text-warm-plum">
+    <div className="min-h-screen bg-white text-warm-plum animate-page-fade">
       <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/" className="text-2xl font-serif text-warm-plum inline-flex items-center gap-2">
@@ -74,7 +74,7 @@ export const Help = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-warm-accent/10 mb-5">
             <HelpCircle size={28} className="text-warm-accent" />
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+          <p className="eyebrow mb-3">
             Centro de ayuda
           </p>
           <h1 className="font-serif text-5xl sm:text-6xl text-warm-plum leading-tight mb-4">
@@ -110,7 +110,7 @@ export const Help = () => {
       {/* Contact */}
       <section className="px-6 py-16">
         <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3 text-center">
+          <p className="eyebrow mb-3 text-center">
             ¿No encuentras tu respuesta?
           </p>
           <h2 className="font-serif text-4xl text-warm-plum text-center mb-8">

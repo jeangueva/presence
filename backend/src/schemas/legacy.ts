@@ -54,14 +54,14 @@ export const assetSchema = z.object({
   location: z.string().max(500).optional(),
 });
 
+// Identity and free-text declarations only. The document body is composed
+// server-side from final wishes + estate + heirs + assets — the user never
+// authors HTML, so there is nothing here to sanitize or size-cap in the megabytes.
 export const willSchema = z.object({
   testator_full_name: z.string().max(255).optional().nullable(),
   testator_id_number: z.string().max(100).optional().nullable(),
   city: z.string().max(255).optional().nullable(),
   declarations: z.string().max(20_000).optional().nullable(),
-  // Rich authored document (HTML). Generous cap: inline base64 images/signature.
-  body_html: z.string().max(5_000_000).optional().nullable(),
-  template_id: z.string().max(50).optional().nullable(),
 });
 
 export const posthumousMessageSchema = z.object({

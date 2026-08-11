@@ -17,4 +17,4 @@ Disallow: /forgot-password
 Disallow: /login
 Disallow: /register
 
-Sitemap: /sitemap.xml
+Sitemap: __SITE_URL__/sitemap.xml

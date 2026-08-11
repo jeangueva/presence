@@ -61,7 +61,7 @@ export const VaultCreate = () => {
       </Link>
 
       <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+        <p className="eyebrow mb-2">
           Nueva memoria
         </p>
         <h1 className="font-serif text-4xl text-warm-plum mb-3">Crea un Memory Vault</h1>

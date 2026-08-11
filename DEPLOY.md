@@ -2,7 +2,7 @@
 
 Esta guía asume que **ya tienes**:
 - El repo en GitHub (públio o privado).
-- Cuenta de Supabase con migraciones 0001–0008 aplicadas.
+- Cuenta de Supabase con migraciones 0001–0013 aplicadas.
 - Cuenta de Resend con dominio verificado (opcional pero recomendado).
 - Cuenta de MercadoPago developer + API key (modo Test o Producción).
 
@@ -26,7 +26,7 @@ Render es gratis (free tier) y maneja Node + sharp + bcrypt sin problemas. Se du
    - `ANTHROPIC_API_KEY`
    - `GROQ_API_KEY`
    - `RESEND_API_KEY`, `EMAIL_FROM` (ej. `Presence <noreply@tudominio.com>`)
-   - `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`
+   - `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`
    - `ADMIN_TOKEN` → genera otro `openssl rand -base64 32`
    - `SENTRY_DSN` (opcional)
    - `FRONTEND_URL` → **lo llenas en el paso 2.5** después de tener la URL de Pages
@@ -65,10 +65,121 @@ Copia la URL de Cloudflare Pages y pégala en Render → service backend → Env
 
 ## 3. Configura el webhook de MercadoPago
 
+Presence cobra de **dos formas distintas**, y cada una usa una API distinta de
+MercadoPago. Si solo activas una, la otra falla en silencio:
+
+| Producto | Precio | Producto MercadoPago | Dónde paga el usuario | Eventos del webhook |
+|---|---|---|---|---|
+| **Legado** | pago único | **Checkout API** (Bricks) | en `presence.app/checkout/legado` | `payment` |
+| **Vault IA** | mensual | **Suscripciones** | redirect a MercadoPago | `preapproval`, `subscription_authorized_payment` |
+
+Legado usa **Checkout Bricks**: el formulario vive en nuestra página, estilizado
+con los tokens de `tokens.css`, pero los campos de tarjeta son iframes de
+MercadoPago. El número de tarjeta nunca pasa por nuestro JS ni por el servidor —
+solo recibimos el token de un solo uso.
+
+Vault IA sigue con redirect porque **preapproval no tiene equivalente en
+Bricks**: MercadoPago no ofrece un brick de suscripciones.
+
+> **Alcance PCI:** renderizar campos de tarjeta en tu dominio te mueve de SAQ-A
+> a **SAQ-A-EP** (más cuestionario, escaneos ASV trimestrales). Confírmalo con
+> tu adquirente — el scoping depende del caso.
+
+El panel de MercadoPago te obliga a declarar **un solo producto por
+aplicación**, así que necesitas **dos aplicaciones**:
+
+| Aplicación | Producto a declarar | Variables en Render |
+|---|---|---|
+| `Presence — Legado` | Checkout API | `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET` |
+| `Presence — Vault IA` | Suscripciones | `MERCADOPAGO_SUBSCRIPTION_ACCESS_TOKEN`, `MERCADOPAGO_SUBSCRIPTION_WEBHOOK_SECRET` |
+
+Ambas apuntan al **mismo endpoint** `/billing/webhook`. El backend elige el
+secreto de firma según el tipo de evento, así que no hay ambigüedad.
+
+Si dejas vacías las `SUBSCRIPTION_*`, el backend reutiliza las credenciales de
+Checkout API para las suscripciones — sirve si una sola aplicación te cubre
+ambos casos, pero no es lo habitual.
+
+**Puedes lanzar solo con la app de Legado.** Sin la app de suscripciones, la
+tarjeta de Vault IA aparece como "Próximamente" y deshabilitada, en vez de
+mandar a alguien a un checkout que no puede completarse. Legado, que es el
+producto que de verdad quieres vender, funciona igual.
+
+La `MERCADOPAGO_PUBLIC_KEY` la encuentras en la misma pantalla de credenciales
+que el access token. Es pública por diseño: viaja al navegador para que el Brick
+pueda tokenizar. El **access token nunca** sale del servidor.
+
+### Webhooks
+
 1. Ve a https://www.mercadopago.com/developers/panel → **Notificaciones webhooks**.
 2. Crea un endpoint apuntando a: `https://TU-BACKEND.onrender.com/billing/webhook`
-3. Eventos: marca **Suscripciones (preapproval)**.
+3. Eventos: marca **Pagos**, **Suscripciones** *y* **Pagos autorizados de suscripción**.
+   - Sin `payment`, quien compre Legado paga y nunca recibe el acceso.
+   - Sin `subscription_authorized_payment`, la fecha de renovación no avanza y
+     el suscriptor de Vault pierde el acceso al mes exacto mientras le sigues
+     cobrando.
 4. Copia el **Secret de firma** → pégalo en Render como `MERCADOPAGO_WEBHOOK_SECRET` → save → redeploya.
+
+### Comprueba que quedó bien
+
+```bash
+cd backend && npm run check:env
+```
+
+Lista qué credenciales están puestas y cuáles faltan, con los valores
+enmascarados (nunca los imprime completos). También te dice si estás en modo
+**PRUEBA** o **PRODUCCIÓN**, que es el error más caro de no notar.
+
+### Precios: dónde se definen y por qué hay dos números
+
+`plans.ts` lleva una cifra en USD (`price_usd`) que se usa solo para el copy y
+los datos estructurados de SEO. **Lo que se cobra de verdad** son las variables
+de entorno, en la moneda local de tu cuenta de MercadoPago:
+
+```
+MERCADOPAGO_CURRENCY=COP
+MERCADOPAGO_PRICE_LEGADO=396000   # pago único
+MERCADOPAGO_PRICE_VAULT=48000     # mensual
+```
+
+La página de precios consulta `GET /billing/pricing` y muestra **el monto real
+en moneda local**, no el USD — así nunca anuncias un precio distinto del que
+cobras. Si billing no está configurado, cae al USD como referencia.
+
+El backend **no arranca** si un plan de pago se queda sin precio: mejor un
+deploy fallido que un usuario llegando al checkout de un plan sin importe.
+
+---
+
+## 3.5 Cron del check-in de vida (Cloudflare Workers — gratis)
+
+El dead-man's switch necesita un barrido diario. Va en un **Cron Trigger de
+Cloudflare**, no en Render: los cron jobs de Render no están en el free tier, y
+un Worker que solo hace un `fetch` sí es gratis.
+
+```bash
+cd workers/deadman-cron
+npm install
+wrangler secret put BACKEND_URL   # https://TU-BACKEND.onrender.com
+wrangler secret put ADMIN_TOKEN   # el mismo valor que en Render
+npm run deploy
+```
+
+Corre todos los días a las **12:00 UTC** (≈ 7am Bogotá). Antes de disparar el
+barrido hace polling a `/health` hasta 60 s, porque el free tier de Render se
+duerme y el arranque en frío se comería el timeout.
+
+**Probarlo sin esperar al día siguiente:**
+
+```bash
+curl -X POST https://presence-deadman-sweep.TU-SUBDOMINIO.workers.dev \
+  -H "X-Admin-Token: TU_ADMIN_TOKEN"
+
+npm run tail   # ver los logs en vivo
+```
+
+Si prefieres tenerlo en Render, el bloque está comentado al final de
+`render.yaml` — pero requiere plan de pago.
 
 ---
 
@@ -88,7 +199,9 @@ Sin esto, los emails (verificación, password reset, notificaciones, mensajes p�
 2. Registro nuevo → revisa email (verificación).
 3. Crea un Memory Vault, sube un audio (verifica que Whisper lo transcribe).
 4. Crea un memorial, hazlo público → comparte la URL `/m/:slug` → comprueba que carga.
-5. Settings → Plan → click "Cambiar de plan" → checkout en MercadoPago con tarjeta de prueba (Visa `4509 9535 6623 3704`, vence `11/30`, CVV `123`, nombre `APRO`) → confirma → vuelves al settings con banner "¡Pago confirmado!" tras unos segundos (cuando llegue el webhook).
+5. Precios → **Comprar Legado** → checkout con tarjeta de prueba (Visa `4509 9535 6623 3704`, vence `11/30`, CVV `123`, nombre `APRO`) → confirma. Comprueba en Supabase que `users.legado_purchased_at` quedó con fecha: eso es lo que concede el acceso permanente.
+6. Settings → **Añadir Vault IA** → mismo checkout, pero flujo de suscripción. Verifica que `subscription_tier` pasa a `vault`.
+7. Settings → Check-in de vida: añade un contacto de confianza, escribe un mensaje póstumo y activa el check-in. Luego dispara el cron a mano (Render → **Trigger run**) para ver el email.
 
 ---
 

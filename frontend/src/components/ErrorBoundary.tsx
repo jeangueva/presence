@@ -22,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="min-h-screen bg-warm-fog flex items-center justify-center px-6 py-12 text-center">
         <div className="max-w-md">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+          <p className="eyebrow mb-3">
             Algo salió mal
           </p>
           <h1 className="font-serif text-4xl text-warm-plum mb-4">

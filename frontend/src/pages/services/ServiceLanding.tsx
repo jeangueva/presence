@@ -39,7 +39,7 @@ export const ServiceLanding = () => {
   const ctaHref = isAuthed ? "/app/legacy" : "/register";
 
   return (
-    <div className="min-h-screen bg-white text-warm-plum">
+    <div className="min-h-screen bg-white text-warm-plum animate-page-fade">
       <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/" className="text-2xl font-serif tracking-tight text-warm-plum">
@@ -75,7 +75,7 @@ export const ServiceLanding = () => {
           >
             <Icon size={28} className="text-warm-accent" />
           </motion.div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+          <p className="eyebrow mb-3">
             {service.eyebrow}
           </p>
           <h1 className="font-serif text-5xl sm:text-6xl text-warm-plum leading-tight mb-5">
@@ -105,7 +105,7 @@ export const ServiceLanding = () => {
       {/* FEATURES */}
       <section className="px-6 py-16 bg-warm-fog/60">
         <div className="max-w-5xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3 text-center">
+          <p className="eyebrow mb-3 text-center">
             Lo que incluye
           </p>
           <h2 className="font-serif text-4xl text-warm-plum text-center mb-12">
@@ -136,7 +136,7 @@ export const ServiceLanding = () => {
       {service.faqs.length > 0 && (
         <section className="px-6 py-16">
           <div className="max-w-3xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3 text-center">
+            <p className="eyebrow mb-3 text-center">
               Preguntas frecuentes
             </p>
             <h2 className="font-serif text-4xl text-warm-plum text-center mb-12">

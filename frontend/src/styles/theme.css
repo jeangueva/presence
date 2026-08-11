@@ -1,4 +1,14 @@
-/* Cinematic entrance animations — hero and above-the-fold content. */
+/* ---------------------------------------------------------------------------
+   Presence — motion system.
+
+   One vocabulary shared by the marketing site and the app. Durations and the
+   easing curve come from tokens.css, so motion stays in step with the rest of
+   the design system. Every animation degrades to `none` under
+   `prefers-reduced-motion` — grief-adjacent UI is exactly where vestibular
+   sensitivity matters most.
+   --------------------------------------------------------------------------- */
+
+/* ---- Entrance: above-the-fold, plays once on load ---------------------- */
 @keyframes fade-rise {
   from {
     opacity: 0;
@@ -11,19 +21,58 @@
 }
 
 .animate-fade-rise {
-  animation: fade-rise 0.8s ease-out both;
+  animation: fade-rise var(--duration-reveal) ease-out both;
 }
 .animate-fade-rise-delay {
-  animation: fade-rise 0.8s ease-out 0.2s both;
+  animation: fade-rise var(--duration-reveal) ease-out 0.2s both;
 }
 .animate-fade-rise-delay-2 {
-  animation: fade-rise 0.8s ease-out 0.4s both;
+  animation: fade-rise var(--duration-reveal) ease-out 0.4s both;
+}
+/* Fourth step in the hero stagger — the fine print under the CTA. */
+.animate-fade-rise-delay-3 {
+  animation: fade-rise var(--duration-reveal) ease-out 0.6s both;
+}
+
+/* ---- Route change: applied to the root of public + app pages ----------- */
+@keyframes page-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-fade {
+  animation: page-fade var(--duration-page) ease-out both;
+}
+
+/* ---- Modal / panel entrance ------------------------------------------- */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s var(--ease-cinematic) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-rise,
   .animate-fade-rise-delay,
-  .animate-fade-rise-delay-2 {
+  .animate-fade-rise-delay-2,
+  .animate-fade-rise-delay-3,
+  .animate-page-fade,
+  .animate-scale-in {
     animation: none;
   }
 }

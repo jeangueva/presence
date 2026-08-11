@@ -112,7 +112,7 @@ export const Dashboard = () => {
     >
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+          <p className="eyebrow mb-2">
             Tus memorias
           </p>
           <h1 className="font-serif text-4xl text-warm-plum">Mis Memory Vaults</h1>
@@ -166,7 +166,7 @@ export const Dashboard = () => {
             <Plus size={18} /> Crear el primero
           </Link>
           <div className="mt-10 pt-8 border-t border-warm-sand text-left max-w-md mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-3">
+            <p className="eyebrow mb-3">
               Cómo aprovecharlo
             </p>
             <ol className="space-y-2 text-sm text-warm-olive list-decimal list-inside">

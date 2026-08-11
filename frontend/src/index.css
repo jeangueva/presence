@@ -1,4 +1,5 @@
 @import "./styles/fonts.css";
+@import "./styles/tokens.css";
 @import "./styles/theme.css";
 
 @tailwind base;
@@ -7,25 +8,53 @@
 
 @layer base {
   html, body, #root { height: 100%; }
-  body {
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
+  /* Anchor links (#pilares, #beta…) glide instead of jumping. */
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
   }
-  h1, h2, h3 { @apply font-serif font-normal tracking-tight; }
+  body {
+    font-family: var(--font-body);
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Display type is serif everywhere by default — pages only opt out, never in.
+     `tracking-section` is the negative tracking the serif needs at heading
+     sizes; the hero overrides it with `tracking-display`. */
+  h1, h2, h3 { @apply font-serif font-normal tracking-section; }
+  /* Focus is a single system-wide ring — no per-component reinvention. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ink));
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(var(--ink));
+    color: rgb(var(--on-ink));
+  }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-warm-accent hover:bg-warm-accent-hover text-white font-medium px-6 py-2.5 rounded-full transition-all duration-200 hover:scale-[1.03] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+    @apply bg-warm-accent hover:bg-warm-accent-hover text-on-ink font-medium px-6 py-2.5 rounded-pill transition-all duration-hover ease-cinematic hover:scale-lift disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
   }
   .btn-secondary {
-    @apply bg-transparent border border-warm-sand hover:border-warm-plum text-warm-plum font-medium px-6 py-2.5 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-transparent border border-warm-sand hover:border-warm-plum text-warm-plum font-medium px-6 py-2.5 rounded-pill transition duration-hover ease-cinematic disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .input {
-    @apply w-full px-4 py-2.5 border border-warm-sand rounded-xl focus:outline-none focus:border-warm-plum focus:ring-2 focus:ring-warm-plum/10 bg-white text-warm-plum placeholder:text-warm-silver transition;
+    @apply w-full px-4 py-2.5 border border-warm-sand rounded-card focus:outline-none focus:border-warm-plum focus:ring-2 focus:ring-warm-plum/10 bg-canvas text-warm-plum placeholder:text-warm-silver transition duration-hover;
   }
   .card {
-    @apply bg-white rounded-2xl border border-warm-sand p-6;
+    @apply bg-canvas rounded-panel border border-warm-sand p-6;
+  }
+  /* Eyebrow label above section headings — the same treatment on the marketing
+     site and inside the app, so both read as one product. Replaces 30 hand-rolled
+     variants that had drifted across two tracking values and two weights.
+     Colour and margin are left to the caller (utilities outrank this layer),
+     which is how the inverted `.eyebrow text-white/50` on black slabs works. */
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-eyebrow text-warm-silver;
   }
 
   /* ---- Ambient background (used behind app pages) ----
@@ -62,9 +91,9 @@
   .shimmer {
     background: linear-gradient(
       90deg,
-      rgba(232, 232, 232, 0.4) 0%,
-      rgba(232, 232, 232, 0.8) 50%,
-      rgba(232, 232, 232, 0.4) 100%
+      rgb(var(--hairline) / 0.4) 0%,
+      rgb(var(--hairline) / 0.8) 50%,
+      rgb(var(--hairline) / 0.4) 100%
     );
     background-size: 200% 100%;
     animation: shimmer-slide 1.6s ease-in-out infinite;
@@ -72,18 +101,13 @@
 
   /* ---- Polaroid-style card treatment ---- */
   .polaroid {
-    background: #ffffff;
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      0 8px 24px -8px rgba(0, 0, 0, 0.12);
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 0.35s ease;
+    background: rgb(var(--canvas));
+    box-shadow: var(--shadow-raise);
+    transition: transform 0.35s var(--ease-cinematic), box-shadow 0.35s ease;
   }
   .polaroid:hover {
     transform: translateY(-4px) rotate(-0.6deg);
-    box-shadow:
-      0 2px 4px rgba(0, 0, 0, 0.05),
-      0 16px 36px -10px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--shadow-lift);
   }
   .polaroid:nth-child(2n):hover {
     transform: translateY(-4px) rotate(0.6deg);
@@ -118,9 +142,9 @@
    Tailwind preflight strips, scoped so it only affects the will editor/preview. */
 .will-doc:focus-within { outline: none; }
 .will-doc .ProseMirror { outline: none; min-height: 340px; }
-.will-doc h1 { font-family: "Instrument Serif", Georgia, serif; font-size: 1.9rem; line-height: 1.2; color: #000000; margin: 0.6em 0 0.3em; }
-.will-doc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #6F6F6F; margin: 1.4em 0 0.4em; }
-.will-doc p { margin: 0.5em 0; line-height: 1.65; color: #000000; }
+.will-doc h1 { font-family: var(--font-display); font-size: 1.9rem; line-height: 1.2; color: rgb(var(--ink)); margin: 0.6em 0 0.3em; }
+.will-doc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: rgb(var(--muted)); margin: 1.4em 0 0.4em; }
+.will-doc p { margin: 0.5em 0; line-height: 1.65; color: rgb(var(--ink)); }
 .will-doc ul { list-style: disc; padding-left: 1.4em; margin: 0.5em 0; }
 .will-doc ol { list-style: decimal; padding-left: 1.4em; margin: 0.5em 0; }
 .will-doc li { margin: 0.25em 0; }
@@ -129,5 +153,5 @@
 .will-doc u { text-decoration: underline; }
 .will-doc img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; }
 .will-doc .ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder); color: #A3A3A3; float: left; height: 0; pointer-events: none;
+  content: attr(data-placeholder); color: rgb(var(--faint)); float: left; height: 0; pointer-events: none;
 }

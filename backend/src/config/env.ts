@@ -33,11 +33,26 @@ const schema = z.object({
   // is empty, billing endpoints return a clear "not configured" error.
   // Currency must match what your MercadoPago account supports (COP/MXN/ARS/BRL/CLP/PEN/UYU).
   // Amounts are in the LOCAL currency (e.g. 36000 COP, 199 MXN, 9000 ARS).
+  // MercadoPago's panel makes you declare ONE product per application, so a
+  // product that sells both a one-time purchase (Checkout API) and a
+  // subscription (Suscripciones) needs two applications — and therefore two
+  // sets of credentials.
+  //
+  // MERCADOPAGO_ACCESS_TOKEN is the Checkout API app (one-time). If the
+  // SUBSCRIPTION_* pair is empty, the same credentials are reused for
+  // preapprovals, which is fine when a single application covers both.
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional().default(""),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional().default(""),
+  // Public key of the Checkout API application. Safe to ship to the
+  // browser — the Payment Brick needs it to tokenize the card client-side so
+  // the raw PAN never reaches our servers.
+  MERCADOPAGO_PUBLIC_KEY: z.string().optional().default(""),
+  MERCADOPAGO_SUBSCRIPTION_ACCESS_TOKEN: z.string().optional().default(""),
+  MERCADOPAGO_SUBSCRIPTION_WEBHOOK_SECRET: z.string().optional().default(""),
   MERCADOPAGO_CURRENCY: z.string().default("COP"),
-  MERCADOPAGO_PRICE_PERSONAL: z.coerce.number().default(36000),
-  MERCADOPAGO_PRICE_FAMILY: z.coerce.number().default(76000),
+  // Legado is a one-time charge, Vault is monthly. Both in LOCAL currency.
+  MERCADOPAGO_PRICE_LEGADO: z.coerce.number().default(396000),
+  MERCADOPAGO_PRICE_VAULT: z.coerce.number().default(48000),
   // Public URL where MercadoPago will POST webhook notifications.
   // In dev use ngrok / cloudflare tunnel; in prod the public API URL.
   BACKEND_PUBLIC_URL: z.string().default(""),

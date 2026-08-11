@@ -194,16 +194,6 @@ export const deleteMemorialPhotoRecord = async (photoId: string) => {
   if (error) throw error;
 };
 
-export const updatePhotoStory = async (photoId: string, story: string) => {
-  const { error } = await supabase
-    .from("memorial_photos")
-    .update({ ai_story: story, ai_story_generated_at: new Date().toISOString() })
-    .eq("id", photoId);
-  if (error) throw error;
-};
-
-// ---------- Guestbook ----------
-
 export const submitGuestbookEntry = async (params: {
   memorialId: string;
   visitorName: string;

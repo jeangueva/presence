@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,69 +8,63 @@ import {
   FileText,
   Lock,
   MessageSquareHeart,
-  PawPrint,
   Plus,
   Scroll,
   ScrollText,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import DOMPurify from "dompurify";
 import { api } from "../lib/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
-// Lazy: the will studio pulls in TipTap (~450 KB). Keep it out of the initial
-// bundle — it loads only when the user opens the Testamento Digital section.
-const WillStudio = lazy(() =>
-  import("../components/WillStudio").then((m) => ({ default: m.WillStudio }))
-);
+type TabKey = "wishes" | "estate" | "messages" | "will";
 
-type TabKey = "dependents" | "pets" | "wishes" | "estate" | "messages" | "will";
-
-const MODULES: {
+/**
+ * Three ordered steps and a terminal one. The previous version was six
+ * independent tabs with no order and no end state — you could fill everything
+ * and still never reach a moment where the product said "listo". People buying
+ * estate planning are buying that moment, so the flow now has one.
+ */
+const STEPS: {
   key: TabKey;
+  step: string;
   label: string;
   blurb: string;
   icon: LucideIcon;
 }[] = [
   {
-    key: "dependents",
-    label: "Dependientes",
-    blurb: "Quién cuida a hijos, padres o personas a tu cargo.",
-    icon: Users,
-  },
-  {
-    key: "pets",
-    label: "Mascotas",
-    blurb: "Cuidador, veterinario y rutinas de tus mascotas.",
-    icon: PawPrint,
-  },
-  {
     key: "wishes",
-    label: "Últimos deseos",
+    step: "01",
+    label: "Tus deseos",
     blurb: "Cómo quieres ser recordada/o: ceremonia, música, despedida.",
     icon: Scroll,
   },
   {
     key: "estate",
-    label: "Patrimonio",
+    step: "02",
+    label: "Tu patrimonio",
     blurb: "Bienes, herederos y albacea de confianza.",
     icon: ScrollText,
   },
   {
     key: "messages",
-    label: "Mensajes póstumos",
-    blurb: "Mensajes que se entregan a personas concretas después.",
+    step: "03",
+    label: "Tus mensajes",
+    blurb: "Cartas que se entregan a personas concretas después.",
     icon: MessageSquareHeart,
   },
-  {
-    key: "will",
-    label: "Testamento Digital",
-    blurb: "Compila todo en un documento y séllalo con huella de integridad.",
-    icon: FileText,
-  },
 ];
+
+const FINAL_STEP = {
+  key: "will" as const,
+  label: "Tu documento",
+  blurb: "Se arma solo con lo que escribiste en los tres pasos.",
+  icon: FileText,
+};
+
+const ALL_SECTIONS = [...STEPS, FINAL_STEP];
 
 /**
  * Status for each legacy module, derived from the *same* react-query keys the
@@ -78,15 +72,6 @@ const MODULES: {
  * without duplicate fetches.
  */
 const useLegacyStatus = (): Record<TabKey, boolean> => {
-  const dependents = useQuery({
-    queryKey: ["legacy-dependents"],
-    queryFn: async () =>
-      (await api.get<{ entries: unknown[] }>("/legacy/dependents")).data.entries,
-  });
-  const pets = useQuery({
-    queryKey: ["legacy-pets"],
-    queryFn: async () => (await api.get<{ entries: unknown[] }>("/legacy/pets")).data.entries,
-  });
   const wishes = useQuery({
     queryKey: ["legacy-wishes"],
     queryFn: async () =>
@@ -122,8 +107,6 @@ const useLegacyStatus = (): Record<TabKey, boolean> => {
     !!obj && Object.values(obj).some((v) => v !== null && v !== undefined && v !== "");
 
   return {
-    dependents: (dependents.data?.length ?? 0) > 0,
-    pets: (pets.data?.length ?? 0) > 0,
     wishes: hasAnyValue(wishes.data),
     estate:
       hasAnyValue(estate.data) ||
@@ -139,9 +122,15 @@ export const Legacy = () => {
   const [section, setSection] = useState<TabKey | null>(null);
   const status = useLegacyStatus();
 
-  const doneCount = MODULES.filter((m) => status[m.key]).length;
-  const pct = Math.round((doneCount / MODULES.length) * 100);
-  const active = MODULES.find((m) => m.key === section);
+  // Progress counts the three input steps only. The document is the reward for
+  // finishing them, not a fourth chore — including it would leave the bar at
+  // 75% for someone who has actually said everything they wanted to say.
+  const doneCount = STEPS.filter((s) => status[s.key]).length;
+  const pct = Math.round((doneCount / STEPS.length) * 100);
+  const allStepsDone = doneCount === STEPS.length;
+  const sealed = status.will;
+  const active = ALL_SECTIONS.find((s) => s.key === section);
+  const nextStep = STEPS.find((s) => !status[s.key]);
 
   return (
     <motion.div
@@ -151,7 +140,7 @@ export const Legacy = () => {
       className="space-y-6"
     >
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+        <p className="eyebrow mb-2">
           Para prepararte tú
         </p>
         <h1 className="font-serif text-4xl text-warm-plum">Mi legado</h1>
@@ -171,67 +160,123 @@ export const Legacy = () => {
             transition={{ duration: 0.2 }}
             className="space-y-6"
           >
-            {/* Progress */}
+            {/* Progress + the single next action */}
             <div className="card">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-bold text-warm-plum">
-                  Tu plan está {pct}% completo
+                  {sealed
+                    ? "Tu legado está listo y sellado"
+                    : allStepsDone
+                      ? "Ya contaste todo. Falta generar tu documento."
+                      : `Paso ${doneCount + 1} de ${STEPS.length}`}
                 </p>
-                <span className="text-xs text-warm-silver">
-                  {doneCount} de {MODULES.length} secciones
-                </span>
+                <span className="text-xs text-warm-silver">{pct}%</span>
               </div>
-              <div className="h-2.5 rounded-full bg-warm-fog overflow-hidden">
+              <div className="h-2.5 rounded-pill bg-warm-fog overflow-hidden">
                 <motion.div
-                  className="h-full rounded-full bg-warm-accent"
+                  className="h-full rounded-pill bg-warm-accent"
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 />
               </div>
+              {!sealed && (
+                <button
+                  type="button"
+                  onClick={() => setSection(allStepsDone ? "will" : nextStep!.key)}
+                  className="btn-primary mt-5 inline-flex items-center gap-2"
+                >
+                  {allStepsDone
+                    ? "Generar mi documento"
+                    : doneCount === 0
+                      ? "Empezar"
+                      : `Continuar con ${nextStep!.label.toLowerCase()}`}
+                  <ChevronRight size={16} />
+                </button>
+              )}
             </div>
 
-            {/* Module cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {MODULES.map((m) => {
-                const Icon = m.icon;
-                const done = status[m.key];
+            {/* The three steps, in order */}
+            <ol className="space-y-3">
+              {STEPS.map((s) => {
+                const Icon = s.icon;
+                const done = status[s.key];
                 return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setSection(m.key)}
-                    className="text-left card flex items-start gap-4 hover:border-warm-silver transition group"
-                  >
-                    <div className="w-11 h-11 rounded-2xl bg-warm-light flex items-center justify-center shrink-0">
-                      <Icon size={20} className="text-warm-plum" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-serif text-xl text-warm-plum">{m.label}</h3>
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                            done
-                              ? "bg-warm-accent/10 text-warm-accent"
-                              : "bg-warm-fog text-warm-silver"
-                          }`}
-                        >
-                          {done ? <Check size={10} /> : null}
-                          {done ? "Listo" : "Pendiente"}
-                        </span>
+                  <li key={s.key}>
+                    <button
+                      type="button"
+                      onClick={() => setSection(s.key)}
+                      className="w-full text-left card flex items-start gap-4 hover:border-warm-silver transition group"
+                    >
+                      <div
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition ${
+                          done
+                            ? "bg-warm-accent text-on-ink"
+                            : "bg-warm-light text-warm-plum"
+                        }`}
+                      >
+                        {done ? <Check size={20} /> : <Icon size={20} />}
                       </div>
-                      <p className="text-sm text-warm-olive mt-1 leading-relaxed">
-                        {m.blurb}
-                      </p>
-                    </div>
-                    <ChevronRight
-                      size={18}
-                      className="text-warm-silver group-hover:text-warm-accent transition shrink-0 mt-1"
-                    />
-                  </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-warm-silver tabular-nums">
+                            {s.step}
+                          </span>
+                          <h3 className="font-serif text-xl text-warm-plum">{s.label}</h3>
+                        </div>
+                        <p className="text-sm text-warm-olive mt-1 leading-relaxed">
+                          {s.blurb}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        size={18}
+                        className="text-warm-silver group-hover:text-warm-accent transition shrink-0 mt-1"
+                      />
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
+
+            {/* The terminal step reads as the payoff, not a fourth chore */}
+            <button
+              type="button"
+              onClick={() => setSection("will")}
+              disabled={!allStepsDone && !sealed}
+              className={`w-full text-left rounded-panel p-6 flex items-start gap-4 transition group ${
+                allStepsDone || sealed
+                  ? "bg-warm-dark text-on-ink hover:scale-[1.005]"
+                  : "border border-dashed border-warm-sand text-warm-silver cursor-not-allowed"
+              }`}
+            >
+              <div
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                  allStepsDone || sealed ? "bg-white/10" : "bg-warm-fog"
+                }`}
+              >
+                {sealed ? <Lock size={20} /> : <FileText size={20} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3
+                  className={`font-serif text-xl ${
+                    allStepsDone || sealed ? "text-on-ink" : "text-warm-silver"
+                  }`}
+                >
+                  {FINAL_STEP.label}
+                </h3>
+                <p
+                  className={`text-sm mt-1 leading-relaxed ${
+                    allStepsDone || sealed ? "text-white/60" : "text-warm-silver"
+                  }`}
+                >
+                  {sealed
+                    ? "Sellado. Puedes descargarlo o volver a generarlo cuando cambies algo."
+                    : allStepsDone
+                      ? FINAL_STEP.blurb
+                      : "Se desbloquea cuando completes los tres pasos."}
+                </p>
+              </div>
+            </button>
 
             <p className="text-xs text-warm-silver flex items-center gap-1.5">
               <Lock size={12} /> Cifrado en reposo. Solo se libera según tus instrucciones.
@@ -261,18 +306,10 @@ export const Legacy = () => {
                 {active.label}
               </h2>
             )}
-            {section === "dependents" && <DependentsTab />}
-            {section === "pets" && <PetsTab />}
             {section === "wishes" && <WishesTab />}
             {section === "estate" && <EstateTab />}
             {section === "messages" && <MessagesTab />}
-            {section === "will" && (
-              <Suspense
-                fallback={<div className="h-64 bg-warm-fog rounded-2xl animate-pulse" />}
-              >
-                <WillStudio />
-              </Suspense>
-            )}
+            {section === "will" && <WillTab />}
           </motion.div>
         )}
       </AnimatePresence>
@@ -300,283 +337,6 @@ const Field = ({
 const EmptyState = ({ message }: { message: string }) => (
   <p className="text-sm text-warm-silver italic text-center py-6">{message}</p>
 );
-
-// ---------- Dependents ----------
-
-type Dependent = {
-  id: string;
-  full_name: string;
-  relationship?: string | null;
-  date_of_birth?: string | null;
-  caregiver_name?: string | null;
-  caregiver_contact?: string | null;
-  notes?: string | null;
-};
-
-const DependentsTab = () => {
-  const qc = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<Partial<Dependent>>({});
-  const q = useQuery({
-    queryKey: ["legacy-dependents"],
-    queryFn: async () =>
-      (await api.get<{ entries: Dependent[] }>("/legacy/dependents")).data.entries,
-  });
-  const create = useMutation({
-    mutationFn: async () => api.post("/legacy/dependents", form),
-    onSuccess: () => {
-      setForm({});
-      setShowForm(false);
-      qc.invalidateQueries({ queryKey: ["legacy-dependents"] });
-    },
-  });
-  const del = useMutation({
-    mutationFn: async (id: string) => api.delete(`/legacy/dependents/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["legacy-dependents"] }),
-  });
-
-  return (
-    <div className="card space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="font-serif text-2xl text-warm-plum">Personas que dependen de ti</h3>
-        <button
-          type="button"
-          onClick={() => setShowForm((s) => !s)}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          {showForm ? <X size={16} /> : <Plus size={16} />}
-          {showForm ? "Cerrar" : "Añadir"}
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showForm && (
-          <motion.form
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!form.full_name?.trim()) return;
-              create.mutate();
-            }}
-          >
-            <div className="grid sm:grid-cols-2 gap-4 pt-2">
-              <Field label="Nombre completo *">
-                <input
-                  className="input"
-                  value={form.full_name ?? ""}
-                  onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                  required
-                />
-              </Field>
-              <Field label="Relación">
-                <input
-                  className="input"
-                  placeholder="hijo, padre, hermana..."
-                  value={form.relationship ?? ""}
-                  onChange={(e) => setForm({ ...form, relationship: e.target.value })}
-                />
-              </Field>
-              <Field label="Fecha de nacimiento">
-                <input
-                  type="date"
-                  className="input"
-                  value={form.date_of_birth ?? ""}
-                  onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                />
-              </Field>
-              <Field label="Cuidador asignado">
-                <input
-                  className="input"
-                  value={form.caregiver_name ?? ""}
-                  onChange={(e) => setForm({ ...form, caregiver_name: e.target.value })}
-                />
-              </Field>
-              <Field label="Contacto del cuidador">
-                <input
-                  className="input"
-                  placeholder="teléfono o email"
-                  value={form.caregiver_contact ?? ""}
-                  onChange={(e) => setForm({ ...form, caregiver_contact: e.target.value })}
-                />
-              </Field>
-            </div>
-            <Field label="Notas">
-              <textarea
-                className="input min-h-[100px] resize-y mt-4"
-                placeholder="médicos, escuela, rutinas, alergias..."
-                value={form.notes ?? ""}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </Field>
-            <div className="flex justify-end mt-4">
-              <button type="submit" disabled={create.isPending} className="btn-primary">
-                {create.isPending ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
-          </motion.form>
-        )}
-      </AnimatePresence>
-
-      <div className="space-y-2">
-        {q.data?.length === 0 && (
-          <EmptyState message="Aún no añadiste dependientes." />
-        )}
-        {q.data?.map((d) => (
-          <div key={d.id} className="border border-warm-sand rounded-2xl px-4 py-3 flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-warm-plum">{d.full_name}</p>
-              <p className="text-xs text-warm-silver">
-                {d.relationship}
-                {d.date_of_birth ? ` · n. ${d.date_of_birth}` : ""}
-              </p>
-              {d.caregiver_name && (
-                <p className="text-sm text-warm-olive mt-1">
-                  Cuidador: <strong>{d.caregiver_name}</strong>
-                  {d.caregiver_contact ? ` · ${d.caregiver_contact}` : ""}
-                </p>
-              )}
-              {d.notes && <p className="text-sm text-warm-plum/80 mt-1 whitespace-pre-wrap">{d.notes}</p>}
-            </div>
-            <button
-              onClick={() => confirm(`¿Eliminar a ${d.full_name}?`) && del.mutate(d.id)}
-              className="text-warm-silver hover:text-warm-accent p-1.5"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ---------- Pets ----------
-
-type Pet = {
-  id: string;
-  name: string;
-  species?: string | null;
-  breed?: string | null;
-  age_years?: number | null;
-  vet_info?: string | null;
-  food_routine?: string | null;
-  caregiver_name?: string | null;
-  caregiver_contact?: string | null;
-  notes?: string | null;
-};
-
-const PetsTab = () => {
-  const qc = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<Partial<Pet>>({});
-  const q = useQuery({
-    queryKey: ["legacy-pets"],
-    queryFn: async () =>
-      (await api.get<{ entries: Pet[] }>("/legacy/pets")).data.entries,
-  });
-  const create = useMutation({
-    mutationFn: async () => api.post("/legacy/pets", form),
-    onSuccess: () => {
-      setForm({});
-      setShowForm(false);
-      qc.invalidateQueries({ queryKey: ["legacy-pets"] });
-    },
-  });
-  const del = useMutation({
-    mutationFn: async (id: string) => api.delete(`/legacy/pets/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["legacy-pets"] }),
-  });
-
-  return (
-    <div className="card space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="font-serif text-2xl text-warm-plum">Tus mascotas</h3>
-        <button onClick={() => setShowForm((s) => !s)} className="btn-primary inline-flex items-center gap-2">
-          {showForm ? <X size={16} /> : <Plus size={16} />}
-          {showForm ? "Cerrar" : "Añadir"}
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showForm && (
-          <motion.form
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!form.name?.trim()) return;
-              create.mutate();
-            }}
-          >
-            <div className="grid sm:grid-cols-2 gap-4 pt-2">
-              <Field label="Nombre *">
-                <input className="input" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-              </Field>
-              <Field label="Especie">
-                <input className="input" placeholder="perro, gato..." value={form.species ?? ""} onChange={(e) => setForm({ ...form, species: e.target.value })} />
-              </Field>
-              <Field label="Raza">
-                <input className="input" value={form.breed ?? ""} onChange={(e) => setForm({ ...form, breed: e.target.value })} />
-              </Field>
-              <Field label="Edad (años)">
-                <input type="number" min={0} className="input" value={form.age_years ?? ""} onChange={(e) => setForm({ ...form, age_years: e.target.value ? Number(e.target.value) : undefined })} />
-              </Field>
-              <Field label="Cuidador asignado">
-                <input className="input" value={form.caregiver_name ?? ""} onChange={(e) => setForm({ ...form, caregiver_name: e.target.value })} />
-              </Field>
-              <Field label="Contacto del cuidador">
-                <input className="input" value={form.caregiver_contact ?? ""} onChange={(e) => setForm({ ...form, caregiver_contact: e.target.value })} />
-              </Field>
-            </div>
-            <Field label="Veterinario / salud">
-              <textarea className="input min-h-[80px] resize-y mt-4" value={form.vet_info ?? ""} onChange={(e) => setForm({ ...form, vet_info: e.target.value })} />
-            </Field>
-            <Field label="Comida / rutinas">
-              <textarea className="input min-h-[80px] resize-y mt-4" value={form.food_routine ?? ""} onChange={(e) => setForm({ ...form, food_routine: e.target.value })} />
-            </Field>
-            <Field label="Notas">
-              <textarea className="input min-h-[80px] resize-y mt-4" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-            </Field>
-            <div className="flex justify-end mt-4">
-              <button type="submit" disabled={create.isPending} className="btn-primary">
-                {create.isPending ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
-          </motion.form>
-        )}
-      </AnimatePresence>
-
-      <div className="space-y-2">
-        {q.data?.length === 0 && <EmptyState message="Aún no añadiste mascotas." />}
-        {q.data?.map((p) => (
-          <div key={p.id} className="border border-warm-sand rounded-2xl px-4 py-3 flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-warm-plum">{p.name}</p>
-              <p className="text-xs text-warm-silver">
-                {[p.species, p.breed, p.age_years ? `${p.age_years} años` : null].filter(Boolean).join(" · ")}
-              </p>
-              {p.caregiver_name && (
-                <p className="text-sm text-warm-olive mt-1">Cuidador: <strong>{p.caregiver_name}</strong>{p.caregiver_contact ? ` · ${p.caregiver_contact}` : ""}</p>
-              )}
-              {p.vet_info && <p className="text-sm text-warm-plum/80 mt-1 whitespace-pre-wrap"><strong>Vet:</strong> {p.vet_info}</p>}
-              {p.food_routine && <p className="text-sm text-warm-plum/80 mt-1 whitespace-pre-wrap"><strong>Rutina:</strong> {p.food_routine}</p>}
-              {p.notes && <p className="text-sm text-warm-plum/80 mt-1 whitespace-pre-wrap">{p.notes}</p>}
-            </div>
-            <button onClick={() => confirm(`¿Eliminar a ${p.name}?`) && del.mutate(p.id)} className="text-warm-silver hover:text-warm-accent p-1.5">
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // ---------- Final wishes ----------
 
@@ -613,20 +373,13 @@ const WishesTab = () => {
     },
   });
 
-  // hydrate form when query data loads
-  useState(() => {
-    // noop initializer; we re-sync via effect below
-  });
-  // simple sync: when q.data changes, update form once
-  if (q.data && !form.disposition && !form.ceremony_notes && !form.religious_wishes && !form.music_readings && !form.obituary && !form.special_requests) {
-    // hydrate once
-    if (
-      q.data.disposition || q.data.ceremony_notes || q.data.religious_wishes ||
-      q.data.music_readings || q.data.obituary || q.data.special_requests
-    ) {
-      Object.assign(form, q.data);
-    }
-  }
+  // Hydrate from the server once the query resolves. The previous version
+  // did `Object.assign(form, q.data)` during render — that mutates state in
+  // place without scheduling a re-render, so saved answers only appeared if
+  // something else happened to re-render the form.
+  useEffect(() => {
+    if (q.data) setForm(q.data);
+  }, [q.data]);
 
   return (
     <form
@@ -724,18 +477,11 @@ const EstateTab = () => {
   const [form, setForm] = useState<Estate>({});
   const [savedEstate, setSavedEstate] = useState(false);
   // hydrate once when estate loads
-  if (
-    estateQ.data &&
-    !form.summary && !form.executor_name && !form.executor_email &&
-    !form.executor_phone && !form.notary_info
-  ) {
-    if (
-      estateQ.data.summary || estateQ.data.executor_name || estateQ.data.executor_email ||
-      estateQ.data.executor_phone || estateQ.data.notary_info
-    ) {
-      Object.assign(form, estateQ.data);
-    }
-  }
+  // Same in-place-mutation bug as WishesTab had: assigning during render never
+  // schedules an update, so the saved estate silently failed to populate.
+  useEffect(() => {
+    if (estateQ.data) setForm(estateQ.data);
+  }, [estateQ.data]);
   const saveEstate = useMutation({
     mutationFn: async () => api.put("/legacy/estate", form),
     onSuccess: () => {
@@ -1040,6 +786,227 @@ const MessagesTab = () => {
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// ---------- Digital will (composed server-side, not authored) ----------
+
+type WillIdentity = {
+  testator_full_name?: string | null;
+  testator_id_number?: string | null;
+  city?: string | null;
+  declarations?: string | null;
+};
+
+type WillDocument = {
+  body_html: string;
+  content_hash: string;
+  has_content: boolean;
+  seal: {
+    status: string;
+    document_hash: string | null;
+    document_version: number;
+    sealed_at: string | null;
+    valid: boolean;
+  };
+  generated_at: string;
+};
+
+const WillTab = () => {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<WillIdentity>({});
+  const [saved, setSaved] = useState(false);
+
+  const willQ = useQuery({
+    queryKey: ["legacy-will"],
+    queryFn: async () => (await api.get<WillIdentity | null>("/legacy/will")).data,
+  });
+
+  // The document is recomposed from the underlying records on every fetch, so
+  // it must never be served from a stale cache after an edit elsewhere.
+  const docQ = useQuery({
+    queryKey: ["legacy-will-document"],
+    queryFn: async () => (await api.get<WillDocument>("/legacy/will/document")).data,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (willQ.data) setForm(willQ.data);
+  }, [willQ.data]);
+
+  const save = useMutation({
+    mutationFn: async () => api.put("/legacy/will", form),
+    onSuccess: () => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      qc.invalidateQueries({ queryKey: ["legacy-will"] });
+      qc.invalidateQueries({ queryKey: ["legacy-will-document"] });
+    },
+  });
+
+  const seal = useMutation({
+    mutationFn: async () => api.post("/legacy/will/seal"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["legacy-will"] });
+      qc.invalidateQueries({ queryKey: ["legacy-will-document"] });
+    },
+  });
+
+  const doc = docQ.data;
+
+  // Print-to-PDF beats a bundled PDF library here: the browser already renders
+  // this exact markup, and the user picks "Save as PDF" from the native dialog.
+  const printDoc = () => {
+    if (!doc) return;
+    const w = window.open("", "_blank", "width=820,height=900");
+    if (!w) return;
+    w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"/>
+      <title>Disposiciones — Presence</title>
+      <style>
+        body{font-family:Georgia,serif;max-width:42rem;margin:3rem auto;padding:0 1.5rem;color:#000;line-height:1.65}
+        h1{font-size:1.9rem;margin:0 0 1.5rem}
+        h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#6F6F6F;margin:2rem 0 .5rem}
+        p{margin:.5rem 0}
+        .disclaimer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid #E8E8E8;font-size:.8rem;color:#6F6F6F}
+        .seal{margin-top:1rem;font-size:.7rem;color:#A3A3A3;word-break:break-all}
+      </style></head><body>${DOMPurify.sanitize(doc.body_html)}
+      <p class="seal">Huella SHA-256: ${doc.content_hash}${
+        doc.seal.sealed_at
+          ? ` · Sellado el ${new Date(doc.seal.sealed_at).toLocaleString("es")} (v${doc.seal.document_version})`
+          : ""
+      }</p>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  return (
+    <div className="space-y-4">
+      <form
+        className="card space-y-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate();
+        }}
+      >
+        <div>
+          <h3 className="font-serif text-2xl text-warm-plum">Tus datos como otorgante</h3>
+          <p className="text-sm text-warm-olive mt-1">
+            El resto del documento se arma solo con lo que ya escribiste en
+            Últimos deseos y Patrimonio. No tienes que redactar nada.
+          </p>
+        </div>
+
+        <Field label="Nombre completo">
+          <input
+            className="input"
+            value={form.testator_full_name ?? ""}
+            onChange={(e) => setForm({ ...form, testator_full_name: e.target.value })}
+          />
+        </Field>
+        <Field label="Documento de identidad">
+          <input
+            className="input"
+            value={form.testator_id_number ?? ""}
+            onChange={(e) => setForm({ ...form, testator_id_number: e.target.value })}
+          />
+        </Field>
+        <Field label="Ciudad">
+          <input
+            className="input"
+            value={form.city ?? ""}
+            onChange={(e) => setForm({ ...form, city: e.target.value })}
+          />
+        </Field>
+        <Field label="Declaraciones adicionales (opcional)">
+          <textarea
+            className="input min-h-[100px] resize-y"
+            placeholder="Cualquier cosa que quieras dejar dicha y que no encaje en las otras secciones."
+            value={form.declarations ?? ""}
+            onChange={(e) => setForm({ ...form, declarations: e.target.value })}
+          />
+        </Field>
+
+        <div className="flex items-center gap-3 justify-end">
+          {saved && <span className="text-sm text-warm-accent">Guardado</span>}
+          <button type="submit" disabled={save.isPending} className="btn-primary">
+            {save.isPending ? "Guardando..." : "Guardar mis datos"}
+          </button>
+        </div>
+      </form>
+
+      <div className="card space-y-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="font-serif text-2xl text-warm-plum">Tu documento</h3>
+            <p className="text-sm text-warm-olive mt-1">
+              Generado a partir de tus datos. Cada vez que cambias algo, se
+              vuelve a componer.
+            </p>
+          </div>
+          {doc?.seal.valid ? (
+            <span className="text-xs font-medium px-3 py-1.5 rounded-pill bg-warm-accent/10 text-warm-accent inline-flex items-center gap-1.5 shrink-0">
+              <Lock size={12} /> Sellado · v{doc.seal.document_version}
+            </span>
+          ) : (
+            <span className="text-xs font-medium px-3 py-1.5 rounded-pill bg-warm-fog text-warm-silver shrink-0">
+              Borrador
+            </span>
+          )}
+        </div>
+
+        {docQ.isLoading && <div className="h-40 rounded-panel shimmer" />}
+
+        {doc && !doc.has_content && (
+          <EmptyState message="Todavía no hay nada que componer. Empieza por Últimos deseos o Patrimonio." />
+        )}
+
+        {doc && doc.has_content && (
+          <>
+            {/* The backend escapes every interpolated value, so this markup is
+                already safe. Sanitizing again is cheap insurance against a
+                future regression in the composer leaking raw user input. */}
+            <div
+              className="will-doc border border-warm-sand rounded-panel p-6 max-h-[420px] overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(doc.body_html) }}
+            />
+            <p className="text-xs text-warm-silver break-all">
+              Huella SHA-256: {doc.content_hash}
+            </p>
+            {doc.seal.document_hash && !doc.seal.valid && (
+              <p className="text-sm text-warm-olive bg-warm-fog rounded-card px-4 py-3">
+                Cambiaste algo desde el último sello, así que ya no coincide.
+                Vuelve a sellar cuando termines.
+              </p>
+            )}
+            <div className="flex items-center gap-3 justify-end flex-wrap">
+              <button type="button" onClick={printDoc} className="btn-secondary">
+                Descargar PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => seal.mutate()}
+                disabled={seal.isPending || doc.seal.valid}
+                className="btn-primary"
+              >
+                {seal.isPending
+                  ? "Sellando..."
+                  : doc.seal.valid
+                    ? "Ya está sellado"
+                    : "Sellar documento"}
+              </button>
+            </div>
+          </>
+        )}
+
+        <p className="text-xs text-warm-silver flex items-start gap-1.5">
+          <Lock size={12} className="mt-0.5 shrink-0" />
+          El sello acredita que el contenido no cambió desde que lo firmaste, no
+          su validez legal. Para efectos legales, llévalo ante notario.
+        </p>
       </div>
     </div>
   );

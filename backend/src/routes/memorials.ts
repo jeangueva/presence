@@ -33,6 +33,5 @@ router.post(
   asyncHandler(c.uploadProfilePhoto)
 );
 
-router.post("/:id/photos/:photoId/story", asyncHandler(c.photoStoryGenerate));
 
 export default router;

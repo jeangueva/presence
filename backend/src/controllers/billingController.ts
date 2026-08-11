@@ -5,7 +5,9 @@ import { PLANS, type PlanId } from "../config/plans.js";
 import {
   cancelSubscription,
   createCheckoutSession,
+  getPublicPricing,
   isBillingEnabled,
+  processBrickPayment,
   processWebhook,
 } from "../services/billingService.js";
 import { getUsageSnapshot } from "../services/entitlementsService.js";
@@ -17,8 +19,12 @@ const getUser = (req: Request) => {
 };
 
 const checkoutSchema = z.object({
-  plan: z.enum(["personal", "family"]),
+  plan: z.enum(["legado", "vault"]),
 });
+
+export const pricing = async (_req: Request, res: Response) => {
+  res.json(getPublicPricing());
+};
 
 export const me = async (req: Request, res: Response) => {
   const user = getUser(req);
@@ -41,6 +47,38 @@ export const checkout = async (req: Request, res: Response) => {
     successUrl: `${origin}/app/settings?upgrade=success`,
   });
   res.json(session);
+};
+
+const brickSchema = z.object({
+  plan: z.enum(["legado"]),
+  // Shape produced by the Payment Brick's onSubmit. The amount is intentionally
+  // absent — the server reads it from plan config, never from the client.
+  formData: z.object({
+    token: z.string().optional(),
+    payment_method_id: z.string().optional(),
+    issuer_id: z.string().optional(),
+    installments: z.number().int().min(1).max(48).optional(),
+    payer: z
+      .object({
+        email: z.string().email().optional(),
+        identification: z
+          .object({ type: z.string().optional(), number: z.string().optional() })
+          .optional(),
+      })
+      .optional(),
+  }),
+});
+
+export const processPayment = async (req: Request, res: Response) => {
+  const user = getUser(req);
+  const { plan, formData } = brickSchema.parse(req.body);
+  const result = await processBrickPayment({
+    userId: user.id,
+    userEmail: user.email,
+    planId: plan,
+    formData,
+  });
+  res.json(result);
 };
 
 export const cancel = async (req: Request, res: Response) => {

@@ -1,0 +1,12 @@
+name = "presence-deadman-sweep"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# 12:00 UTC ≈ 7am Bogotá / 9am Buenos Aires / 2pm Madrid. A check-in email
+# asking "¿sigues por aquí?" should not land in the middle of the night.
+[triggers]
+crons = ["0 12 * * *"]
+
+# BACKEND_URL and ADMIN_TOKEN are set as secrets, not vars:
+#   wrangler secret put BACKEND_URL
+#   wrangler secret put ADMIN_TOKEN

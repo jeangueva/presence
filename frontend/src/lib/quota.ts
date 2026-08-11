@@ -1,4 +1,5 @@
 import type { QuotaInfo } from "../components/UpgradeModal";
+import { DEFAULT_PLAN } from "./plans";
 
 /**
  * If `err` is an axios 402 from our backend's QuotaExceededError, return
@@ -26,8 +27,8 @@ export const extractQuota = (err: unknown): QuotaInfo | null => {
   if (!d?.reason) return null;
   return {
     reason: d.reason,
-    current_plan: d.current_plan ?? "free",
-    required_plan: d.required_plan ?? "personal",
+    current_plan: d.current_plan ?? DEFAULT_PLAN,
+    required_plan: d.required_plan ?? "legado",
     limit: d.limit ?? 0,
     used: d.used ?? 0,
     message: r.data?.error ?? "Has alcanzado un límite de tu plan.",

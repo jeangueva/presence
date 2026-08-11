@@ -9,7 +9,6 @@ import {
   Link as LinkIcon,
   Lock,
   MessageSquare,
-  Sparkles,
   Trash2,
   Upload,
   X,
@@ -36,8 +35,6 @@ type Photo = {
   id: string;
   photo_url: string;
   caption?: string | null;
-  ai_story?: string | null;
-  ai_story_generated_at?: string | null;
   created_at: string;
 };
 
@@ -193,13 +190,6 @@ const MemorialManager = ({ memorial }: { memorial: Memorial }) => {
   const deletePhoto = useMutation({
     mutationFn: async (photoId: string) => {
       await api.delete(`/memorials/${id}/photos/${photoId}`);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["memorial-photos", id] }),
-  });
-
-  const generatePhotoStory = useMutation({
-    mutationFn: async (photoId: string) => {
-      await api.post(`/memorials/${id}/photos/${photoId}/story`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["memorial-photos", id] }),
   });
@@ -420,14 +410,6 @@ const MemorialManager = ({ memorial }: { memorial: Memorial }) => {
                       />
                       <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition">
                         <button
-                          onClick={() => generatePhotoStory.mutate(p.id)}
-                          disabled={generatePhotoStory.isPending}
-                          title={p.ai_story ? "Regenerar historia" : "Generar historia con IA"}
-                          className="w-8 h-8 rounded-full bg-white/90 text-warm-accent hover:bg-white flex items-center justify-center"
-                        >
-                          <Sparkles size={14} />
-                        </button>
-                        <button
                           onClick={() => {
                             if (confirm("¿Eliminar esta foto?")) {
                               deletePhoto.mutate(p.id);
@@ -441,13 +423,6 @@ const MemorialManager = ({ memorial }: { memorial: Memorial }) => {
                         </button>
                       </div>
                     </div>
-                    {p.ai_story && (
-                      <div className="px-3 py-2 bg-white border-t border-warm-sand">
-                        <p className="text-xs text-warm-plum italic leading-relaxed line-clamp-3">
-                          {p.ai_story}
-                        </p>
-                      </div>
-                    )}
                   </motion.div>
                 ))}
               </div>

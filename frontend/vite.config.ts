@@ -7,8 +7,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Split stable vendor code so it caches across deploys. TipTap stays
-        // out of here on purpose — it's lazy-loaded as its own dynamic chunk.
+        // Split stable vendor code so it caches across deploys.
         manualChunks: {
           "react-vendor": ["react", "react-dom", "react-router-dom"],
           "ui-vendor": ["framer-motion", "@tanstack/react-query", "axios"],

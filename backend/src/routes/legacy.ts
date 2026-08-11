@@ -2,19 +2,13 @@ import { Router } from "express";
 import * as c from "../controllers/legacyController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireAuth } from "../middleware/auth.js";
+import { requirePlanner } from "../middleware/requirePlanner.js";
 
 const router = Router();
 router.use(requireAuth);
-
-// Dependents
-router.get("/dependents", asyncHandler(c.dependentsList));
-router.post("/dependents", asyncHandler(c.dependentsCreate));
-router.delete("/dependents/:id", asyncHandler(c.dependentsDelete));
-
-// Pets
-router.get("/pets", asyncHandler(c.petsList));
-router.post("/pets", asyncHandler(c.petsCreate));
-router.delete("/pets/:id", asyncHandler(c.petsDelete));
+// Reading is free — someone on the Memorial tier should be able to open the
+// planner and see what they would be buying. Writing is what costs.
+router.use(requirePlanner);
 
 // Final wishes
 router.get("/final-wishes", asyncHandler(c.finalWishesGet));

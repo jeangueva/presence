@@ -17,7 +17,20 @@ import { join } from "node:path";
 const origin = (process.env.VITE_SITE_URL ?? "https://presence.app").replace(/\/$/, "");
 const dist = join(process.cwd(), "dist");
 
+// While the backend isn't wired up yet, the site loads but every API call
+// fails. Letting Google index that is worse than not being indexed at all:
+// the first impression it caches is a broken product. VITE_NOINDEX=1 ships a
+// blocking robots.txt instead; drop the flag once the API is live.
+if (process.env.VITE_NOINDEX === "1") {
+  await writeFile(
+    join(dist, "robots.txt"),
+    "# Despliegue provisional: el backend todavía no está conectado.\nUser-agent: *\nDisallow: /\n"
+  );
+  console.log("[seo] robots.txt en NOINDEX — el sitio no se indexará");
+}
+
 for (const file of ["sitemap.xml", "robots.txt"]) {
+  if (process.env.VITE_NOINDEX === "1" && file === "robots.txt") continue;
   const path = join(dist, file);
   try {
     const raw = await readFile(path, "utf8");

@@ -71,9 +71,28 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional().default(""),
 });
 
-const parsed = schema.safeParse(process.env);
+/**
+ * Drop empty values before validating.
+ *
+ * Hosting dashboards (Render, Cloudflare, Vercel) create a variable as soon as
+ * you name it, even if you never paste a value — so the process receives
+ * `FOO=""` rather than no FOO at all. Zod only applies `.default()` to
+ * `undefined`, so an empty string skips the default entirely: a blank price
+ * coerces to 0, and a blank required field fails validation and kills the boot
+ * with a message nobody reads until the service is already down.
+ */
+const withoutEmpty = Object.fromEntries(
+  Object.entries(process.env).filter(([, v]) => v !== undefined && v.trim() !== "")
+);
+
+const parsed = schema.safeParse(withoutEmpty);
 if (!parsed.success) {
-  console.error("Invalid environment:", parsed.error.flatten().fieldErrors);
+  const missing = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+  console.error(
+    "\n[env] No se puede arrancar — faltan variables o son inválidas:\n" +
+      missing.map((m) => `  · ${m}`).join("\n") +
+      "\n\nRellénalas en Render → tu servicio → Environment, y redeploya.\n"
+  );
   process.exit(1);
 }
 

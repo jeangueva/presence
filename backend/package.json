@@ -9,7 +9,9 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "deadman:sweep": "node dist/scripts/deadmanSweep.js",
+    "typecheck": "tsc --noEmit",
+    "check:env": "tsx src/scripts/checkEnv.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

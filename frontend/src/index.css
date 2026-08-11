@@ -1,35 +1,68 @@
+@import "./styles/fonts.css";
+@import "./styles/tokens.css";
+@import "./styles/theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html, body, #root { height: 100%; }
-  body {
-    font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
+  /* Anchor links (#pilares, #beta…) glide instead of jumping. */
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
   }
-  h1, h2, h3 { @apply font-serif; }
+  body {
+    font-family: var(--font-body);
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Display type is serif everywhere by default — pages only opt out, never in.
+     `tracking-section` is the negative tracking the serif needs at heading
+     sizes; the hero overrides it with `tracking-display`. */
+  h1, h2, h3 { @apply font-serif font-normal tracking-section; }
+  /* Focus is a single system-wide ring — no per-component reinvention. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ink));
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(var(--ink));
+    color: rgb(var(--on-ink));
+  }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-warm-accent hover:bg-warm-accent-hover text-white font-bold px-5 py-2.5 rounded-2xl transition shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none;
+    @apply bg-warm-accent hover:bg-warm-accent-hover text-on-ink font-medium px-6 py-2.5 rounded-pill transition-all duration-hover ease-cinematic hover:scale-lift disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
   }
   .btn-secondary {
-    @apply bg-warm-sand hover:bg-warm-light text-warm-plum font-semibold px-5 py-2.5 rounded-2xl transition disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-transparent border border-warm-sand hover:border-warm-plum text-warm-plum font-medium px-6 py-2.5 rounded-pill transition duration-hover ease-cinematic disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .input {
-    @apply w-full px-4 py-2.5 border border-warm-silver/60 rounded-2xl focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 bg-white text-warm-plum placeholder:text-warm-silver transition;
+    @apply w-full px-4 py-2.5 border border-warm-sand rounded-card focus:outline-none focus:border-warm-plum focus:ring-2 focus:ring-warm-plum/10 bg-canvas text-warm-plum placeholder:text-warm-silver transition duration-hover;
   }
   .card {
-    @apply bg-white rounded-3xl border border-warm-sand p-6;
+    @apply bg-canvas rounded-panel border border-warm-sand p-6;
+  }
+  /* Eyebrow label above section headings — the same treatment on the marketing
+     site and inside the app, so both read as one product. Replaces 30 hand-rolled
+     variants that had drifted across two tracking values and two weights.
+     Colour and margin are left to the caller (utilities outrank this layer),
+     which is how the inverted `.eyebrow text-white/50` on black slabs works. */
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-eyebrow text-warm-silver;
   }
 
-  /* ---- Aurora background (used behind app pages) ---- */
+  /* ---- Ambient background (used behind app pages) ----
+     Monochrome: barely-there gray washes instead of color. */
   .aurora-bg {
     background:
-      radial-gradient(ellipse at 20% 0%, rgba(126, 35, 139, 0.04) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 100%, rgba(126, 35, 139, 0.05) 0%, transparent 50%);
+      radial-gradient(ellipse at 20% 0%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(0, 0, 0, 0.03) 0%, transparent 50%);
   }
   .aurora-blob {
     @apply absolute rounded-full blur-3xl;
@@ -38,19 +71,19 @@
   .aurora-blob-1 {
     width: 38vw; height: 38vw;
     top: -10%; left: -5%;
-    background: radial-gradient(circle, rgba(126, 35, 139, 0.20), transparent 70%);
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.05), transparent 70%);
     animation: aurora-drift-1 28s ease-in-out infinite alternate;
   }
   .aurora-blob-2 {
     width: 32vw; height: 32vw;
     top: 30%; right: -10%;
-    background: radial-gradient(circle, rgba(33, 25, 34, 0.10), transparent 70%);
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.04), transparent 70%);
     animation: aurora-drift-2 34s ease-in-out infinite alternate;
   }
   .aurora-blob-3 {
     width: 28vw; height: 28vw;
     bottom: -8%; left: 30%;
-    background: radial-gradient(circle, rgba(126, 35, 139, 0.10), transparent 70%);
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.03), transparent 70%);
     animation: aurora-drift-3 40s ease-in-out infinite alternate;
   }
 
@@ -58,9 +91,9 @@
   .shimmer {
     background: linear-gradient(
       90deg,
-      rgba(229, 229, 224, 0.4) 0%,
-      rgba(229, 229, 224, 0.8) 50%,
-      rgba(229, 229, 224, 0.4) 100%
+      rgb(var(--hairline) / 0.4) 0%,
+      rgb(var(--hairline) / 0.8) 50%,
+      rgb(var(--hairline) / 0.4) 100%
     );
     background-size: 200% 100%;
     animation: shimmer-slide 1.6s ease-in-out infinite;
@@ -68,18 +101,13 @@
 
   /* ---- Polaroid-style card treatment ---- */
   .polaroid {
-    background: #fdfcf9;
-    box-shadow:
-      0 1px 2px rgba(33, 25, 34, 0.04),
-      0 8px 24px -8px rgba(33, 25, 34, 0.12);
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 0.35s ease;
+    background: rgb(var(--canvas));
+    box-shadow: var(--shadow-raise);
+    transition: transform 0.35s var(--ease-cinematic), box-shadow 0.35s ease;
   }
   .polaroid:hover {
     transform: translateY(-4px) rotate(-0.6deg);
-    box-shadow:
-      0 2px 4px rgba(33, 25, 34, 0.05),
-      0 16px 36px -10px rgba(33, 25, 34, 0.18);
+    box-shadow: var(--shadow-lift);
   }
   .polaroid:nth-child(2n):hover {
     transform: translateY(-4px) rotate(0.6deg);
@@ -114,9 +142,9 @@
    Tailwind preflight strips, scoped so it only affects the will editor/preview. */
 .will-doc:focus-within { outline: none; }
 .will-doc .ProseMirror { outline: none; min-height: 340px; }
-.will-doc h1 { font-family: ui-serif, Georgia, serif; font-size: 1.9rem; line-height: 1.2; color: #211922; margin: 0.6em 0 0.3em; }
-.will-doc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #7e238b; margin: 1.4em 0 0.4em; }
-.will-doc p { margin: 0.5em 0; line-height: 1.65; color: #211922; }
+.will-doc h1 { font-family: var(--font-display); font-size: 1.9rem; line-height: 1.2; color: rgb(var(--ink)); margin: 0.6em 0 0.3em; }
+.will-doc h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: rgb(var(--muted)); margin: 1.4em 0 0.4em; }
+.will-doc p { margin: 0.5em 0; line-height: 1.65; color: rgb(var(--ink)); }
 .will-doc ul { list-style: disc; padding-left: 1.4em; margin: 0.5em 0; }
 .will-doc ol { list-style: decimal; padding-left: 1.4em; margin: 0.5em 0; }
 .will-doc li { margin: 0.25em 0; }
@@ -125,5 +153,5 @@
 .will-doc u { text-decoration: underline; }
 .will-doc img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; }
 .will-doc .ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder); color: #91918c; float: left; height: 0; pointer-events: none;
+  content: attr(data-placeholder); color: rgb(var(--faint)); float: left; height: 0; pointer-events: none;
 }

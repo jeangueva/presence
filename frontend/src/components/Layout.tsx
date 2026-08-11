@@ -19,19 +19,22 @@ export const Layout = () => {
     "P";
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `text-sm font-semibold px-3 py-1.5 rounded-xl transition ${
+    `text-sm px-3 py-1.5 rounded-full transition-colors ${
       isActive
-        ? "bg-warm-light text-warm-plum"
-        : "text-warm-olive hover:text-warm-plum hover:bg-warm-fog"
+        ? "bg-black text-white"
+        : "text-warm-olive hover:text-warm-plum"
     }`;
 
   return (
-    <div className="min-h-full flex flex-col relative">
+    <div className="min-h-full flex flex-col relative bg-white">
       <AuroraBackground />
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-warm-sand/70">
+      <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-warm-sand">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
-          <Link to="/app" className="font-serif text-2xl text-warm-plum shrink-0">
-            Presence
+          <Link
+            to="/app"
+            className="font-serif text-2xl tracking-tight text-warm-plum shrink-0"
+          >
+            Presence<sup className="text-xs">®</sup>
           </Link>
           <nav className="flex items-center gap-1 flex-1" data-tour="main-nav">
             <NavLink to="/app" end className={navLinkClass} data-tour="nav-vaults">
@@ -44,7 +47,7 @@ export const Layout = () => {
           {user && (
             <div className="flex items-center gap-3">
               <div
-                className="w-9 h-9 rounded-full bg-warm-accent/10 text-warm-accent font-bold text-sm flex items-center justify-center"
+                className="w-9 h-9 rounded-full bg-black text-white font-medium text-sm flex items-center justify-center"
                 title={user.email}
               >
                 {initial}

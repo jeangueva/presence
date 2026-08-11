@@ -29,7 +29,7 @@ export const Privacy = () => {
         <ul className="list-disc list-inside space-y-1">
           <li>Datos de cuenta: email, contraseña (hash), nombre completo.</li>
           <li>Datos del contenido: biografías, archivos (fotos, audios, documentos), conversaciones con la IA, mensajes en libros de visitas.</li>
-          <li>Datos de plan de legado: dependientes, mascotas, herederos, mensajes póstumos, voluntades.</li>
+          <li>Datos de plan de legado: herederos, bienes, mensajes póstumos, voluntades.</li>
           <li>Datos de pago: nunca almacenamos números de tarjeta. Eso lo gestiona nuestro procesador de pagos (MercadoPago).</li>
         </ul>
         <p>Datos técnicos que recopilamos automáticamente:</p>

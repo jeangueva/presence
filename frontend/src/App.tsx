@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Landing } from "./pages/Landing";
@@ -21,8 +22,25 @@ import { Terms } from "./pages/legal/Terms";
 import { Cookies } from "./pages/legal/Cookies";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { Help } from "./pages/Help";
+import { Checkin } from "./pages/Checkin";
+import { Checkout } from "./pages/Checkout";
+import { ConfirmPassing } from "./pages/ConfirmPassing";
+
+// El scroll del navegador persiste entre rutas en SPAs — sin esto, llegar a
+// una página interna te deja a la altura de la sección desde la que saliste.
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    // "instant" overrides the global smooth scroll-behavior — route changes
+    // must start at the top immediately, not glide from the old position.
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [pathname]);
+  return null;
+};
 
 const App = () => (
+  <>
+  <ScrollToTop />
   <Routes>
     <Route path="/" element={<Landing />} />
     <Route path="/login" element={<Login />} />
@@ -55,8 +73,24 @@ const App = () => (
       <Route path="legacy" element={<Legacy />} />
       <Route path="settings" element={<Settings />} />
     </Route>
+    {/* Checkout renders full-bleed, outside the app chrome, so nothing
+        competes with the payment form. Auth is required — the purchase has to
+        attach to an account. */}
+    <Route
+      path="/checkout/:plan"
+      element={
+        <ProtectedRoute>
+          <Checkout />
+        </ProtectedRoute>
+      }
+    />
+    {/* Resolved from an emailed token — no session, and the trusted
+        contact may not have an account at all. */}
+    <Route path="/checkin/:token" element={<Checkin />} />
+    <Route path="/confirmar/:token" element={<ConfirmPassing />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
+  </>
 );
 
 export default App;

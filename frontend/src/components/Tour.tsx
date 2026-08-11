@@ -141,7 +141,7 @@ export const Tour = ({ tour }: Props) => {
           aria-modal="true"
         >
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-warm-silver">
+            <p className="eyebrow text-[10px]">
               Paso {stepIdx + 1} de {totalSteps}
             </p>
             <button

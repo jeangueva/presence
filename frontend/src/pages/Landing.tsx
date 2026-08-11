@@ -1,19 +1,20 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
 import {
-  Archive,
-  Heart,
-  Send,
-  ScrollText,
-  ShieldCheck,
-  Lock,
-  Trash2,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
+import {
   ArrowRight,
-  Sparkles,
-  Mail,
   CheckCircle2,
   Loader2,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { AxiosError } from "axios";
 import { api } from "../lib/api";
@@ -21,30 +22,32 @@ import { useAuthStore } from "../store/authStore";
 import { SERVICES as SERVICES_LIST } from "../lib/services";
 import { useMeta } from "../hooks/useMeta";
 
+const VIDEO_URL =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4";
+
 const pillars = [
   {
-    icon: Archive,
+    n: "01",
     title: "Memory Vault",
     desc: "Conversa con una IA construida desde la biografía, fotos, audios y recuerdos de quien ya no está.",
-    status: "available" as const,
   },
   {
-    icon: Heart,
+    n: "02",
     title: "Memorial Interactivo",
-    desc: "Un espacio público y dignificado para honrar su vida — línea de tiempo, libro de visitas y galería curada.",
-    status: "available" as const,
+    desc: "Un espacio público y dignificado — línea de tiempo, libro de visitas y galería curada.",
   },
   {
-    icon: Send,
-    title: "Legacy Planner",
-    desc: "Mensajes, audios y videos programados para fechas futuras — cumpleaños, graduaciones, momentos clave.",
-    status: "available" as const,
+    n: "03",
+    title: "Mensajes póstumos",
+    desc: "Cartas escritas hoy, entregadas cuando dejes de responder a nuestro check-in y tus contactos de confianza lo confirmen.",
   },
   {
-    icon: ScrollText,
+    n: "04",
     title: "Testamento Digital",
-    desc: "Documento legal generado, notariado y firmado en blockchain — cuentas, herederos, instrucciones finales.",
-    status: "available" as const,
+    // No decir "documento legal": sin notario no lo es, y prometerlo es un
+    // pasivo. Lo que sí entregamos es el documento compilado y el sello de
+    // integridad — eso es verdad y sigue siendo valioso.
+    desc: "Tu voluntad compilada en un documento y sellada con integridad criptográfica — cuentas, herederos, instrucciones finales.",
   },
 ];
 
@@ -52,17 +55,17 @@ const steps = [
   {
     n: "01",
     title: "Crea un Memory Vault",
-    desc: "Añade nombre, biografía y fechas. Cuanto más rica la biografía, más cercana se sentirá la conversación.",
+    desc: "Añade nombre, biografía y fechas. Cuanto más rica la biografía, más cercana la conversación.",
   },
   {
     n: "02",
     title: "Sube los recuerdos",
-    desc: "Fotos, audios, cartas, transcripciones — Presence los entiende como contexto vivo de la persona.",
+    desc: "Fotos, audios, cartas — Presence los entiende como contexto vivo de la persona.",
   },
   {
     n: "03",
     title: "Conversa cuando quieras",
-    desc: "Pregunta sobre su infancia, su forma de hablar, esa anécdota que siempre contaba. Responde con sus historias.",
+    desc: "Pregunta por su infancia, su forma de hablar, esa anécdota de siempre. Responde con sus historias.",
   },
 ];
 
@@ -75,7 +78,7 @@ const trust = [
   {
     icon: ShieldCheck,
     title: "GDPR por diseño",
-    desc: "Cumplimiento completo del Reglamento Europeo de Protección de Datos. Tu información, tus reglas.",
+    desc: "Cumplimiento completo del Reglamento Europeo de Protección de Datos.",
   },
   {
     icon: Trash2,
@@ -84,21 +87,7 @@ const trust = [
   },
 ];
 
-// ---------------- motion variants ----------------
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-};
-
-const item: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-  },
-};
-
+// ---------------- scroll reveal ----------------
 const FadeIn = ({
   children,
   delay = 0,
@@ -112,224 +101,98 @@ const FadeIn = ({
   return (
     <motion.div
       className={className}
-      initial={reduce ? false : { opacity: 0, y: 28 }}
+      initial={reduce ? false : { opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.8, delay, ease: "easeOut" }}
     >
       {children}
     </motion.div>
   );
 };
 
-// ---------------- decorative SVGs ----------------
-const WavyUnderline = () => (
-  <svg
-    viewBox="0 0 220 14"
-    className="absolute -bottom-3 left-0 w-full h-3"
-    preserveAspectRatio="none"
-    aria-hidden
-  >
-    <motion.path
-      d="M2 8 Q 30 2, 60 8 T 120 8 T 180 8 T 218 8"
-      fill="none"
-      stroke="#7e238b"
-      strokeWidth="3"
-      strokeLinecap="round"
-      initial={{ pathLength: 0 }}
-      whileInView={{ pathLength: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 1.1, delay: 0.6, ease: "easeOut" }}
-    />
-  </svg>
-);
+// ---------------- cinematic video background ----------------
+// Manual loop with fade-in/out so the cut is invisible:
+// rAF monitors currentTime; opacity ramps 0→1 over the first 0.5s and
+// 1→0 over the last 0.5s; on `ended` we wait 100ms, rewind and replay.
+const HeroVideo = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-const FloatingOrbs = () => {
-  const orbs = [
-    { size: 220, top: "-4%", left: "-6%", color: "#7e238b", opacity: 0.06, delay: 0 },
-    { size: 180, top: "30%", left: "85%", color: "#211922", opacity: 0.05, delay: 0.4 },
-    { size: 140, top: "70%", left: "5%", color: "#7e238b", opacity: 0.04, delay: 0.8 },
-    { size: 90, top: "12%", left: "55%", color: "#62625b", opacity: 0.07, delay: 0.2 },
-  ];
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    let raf = 0;
+    let restartTimer: ReturnType<typeof setTimeout>;
+
+    const FADE = 0.5;
+    const tick = () => {
+      if (video.duration) {
+        const t = video.currentTime;
+        const remaining = video.duration - t;
+        let opacity = 1;
+        if (t < FADE) opacity = t / FADE;
+        else if (remaining < FADE) opacity = Math.max(remaining / FADE, 0);
+        video.style.opacity = String(opacity);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    const onEnded = () => {
+      video.style.opacity = "0";
+      restartTimer = setTimeout(() => {
+        video.currentTime = 0;
+        void video.play();
+      }, 100);
+    };
+
+    video.addEventListener("ended", onEnded);
+    void video.play().catch(() => {
+      /* autoplay blocked — gradient backdrop remains */
+    });
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(restartTimer);
+      video.removeEventListener("ended", onEnded);
+    };
+  }, []);
+
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {orbs.map((o, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full blur-3xl"
-          style={{
-            width: o.size,
-            height: o.size,
-            top: o.top,
-            left: o.left,
-            backgroundColor: o.color,
-            opacity: o.opacity,
-          }}
-          animate={{
-            y: [0, -22, 0],
-            x: [0, 12, 0],
-          }}
-          transition={{
-            duration: 9 + i,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: o.delay,
-          }}
-        />
-      ))}
+    <div
+      className="absolute z-0 pointer-events-none"
+      // Longhands, not `inset: "auto 0 0 0"` — the shorthand resets `top` to
+      // auto no matter which order the two are declared in, which collapsed
+      // this box onto the video's intrinsic 300x150 placeholder at the foot of
+      // the viewport. The footage must run from y=300 to the bottom of the fold.
+      style={{ top: "300px", right: 0, bottom: 0, left: 0 }}
+      aria-hidden
+    >
+      <video
+        ref={videoRef}
+        src={VIDEO_URL}
+        muted
+        playsInline
+        autoPlay
+        preload="auto"
+        className="w-full h-full object-cover"
+        // Desaturated so the footage belongs to the monochrome system — the
+        // source clip is a saturated green landscape, which read as a stray
+        // image dropped onto the page rather than the page's own background.
+        style={{
+          opacity: 0,
+          transition: "opacity 0.2s linear",
+          filter: "grayscale(1) contrast(0.9)",
+        }}
+      />
+      {/* The hero copy sits over the top third of this video. A fully
+          transparent midpoint left the #6F6F6F description and #A3A3A3 fine
+          print illegible, so the wash holds ~55% white through the middle —
+          enough for the footage to read, enough for the type to stay on spec. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-canvas via-canvas/55 to-canvas" />
     </div>
   );
 };
-
-type PolaroidProps = {
-  rotate: number;
-  x: number;
-  y: number;
-  gradient: string;
-  caption: string;
-  date: string;
-  delay: number;
-  z: number;
-  children?: ReactNode;
-};
-
-const Polaroid = ({
-  rotate,
-  x,
-  y,
-  gradient,
-  caption,
-  date,
-  delay,
-  z,
-  children,
-}: PolaroidProps) => (
-  <motion.div
-    className="absolute top-1/2 left-1/2 w-[78%] sm:w-[68%] max-w-sm bg-white p-3 pb-12 shadow-[0_8px_32px_-12px_rgba(33,25,34,0.25)]"
-    style={{
-      borderRadius: 8,
-      zIndex: z,
-      translateX: "-50%",
-      translateY: "-50%",
-    }}
-    initial={{ opacity: 0, scale: 0.8, rotate: 0, x: 0, y: 0 }}
-    animate={{ opacity: 1, scale: 1, rotate, x, y }}
-    transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }}
-    whileHover={{ rotate: rotate * 0.6, scale: 1.03, transition: { duration: 0.3 } }}
-  >
-    <div
-      className="aspect-[4/5] rounded-sm overflow-hidden flex flex-col justify-end p-5"
-      style={{ background: gradient }}
-    >
-      {children}
-    </div>
-    <div className="absolute bottom-3 left-0 right-0 text-center px-3">
-      <p className="font-serif text-warm-plum text-base sm:text-lg leading-tight">
-        {caption}
-      </p>
-      <p className="text-[10px] font-mono text-warm-silver mt-1 tracking-wider">
-        {date}
-      </p>
-    </div>
-  </motion.div>
-);
-
-const PolaroidStack = () => (
-  <div className="relative aspect-[4/5] w-full max-w-md mx-auto">
-    {/* Decorative sparkle */}
-    <motion.div
-      className="absolute -top-4 -right-2 z-30 text-warm-accent"
-      initial={{ opacity: 0, scale: 0, rotate: -45 }}
-      animate={{ opacity: 1, scale: 1, rotate: 0 }}
-      transition={{ delay: 1.4, duration: 0.6, ease: "backOut" }}
-    >
-      <Sparkles size={28} className="drop-shadow-sm" />
-    </motion.div>
-    <motion.div
-      className="absolute bottom-8 -left-4 z-30 text-warm-plum/70"
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 1.6, duration: 0.6, ease: "backOut" }}
-    >
-      <Sparkles size={18} />
-    </motion.div>
-
-    <Polaroid
-      rotate={-9}
-      x={-58}
-      y={4}
-      gradient="linear-gradient(135deg, #e0e0d9 0%, #c8c8c1 100%)"
-      caption="Verano en Cartagena"
-      date="JUL · 1968"
-      delay={0.5}
-      z={1}
-    >
-      <div className="flex items-end gap-1 opacity-60">
-        <div className="w-2 h-12 bg-warm-plum/30 rounded-sm" />
-        <div className="w-2 h-8 bg-warm-plum/20 rounded-sm" />
-        <div className="w-2 h-16 bg-warm-plum/40 rounded-sm" />
-      </div>
-    </Polaroid>
-
-    <Polaroid
-      rotate={7}
-      x={62}
-      y={-8}
-      gradient="linear-gradient(135deg, #f6f6f3 0%, #e5e5e0 60%, #91918c 100%)"
-      caption="Cumpleaños 70"
-      date="MAR · 2012"
-      delay={0.7}
-      z={2}
-    >
-      <div className="self-start w-10 h-10 rounded-full bg-warm-accent/30 mb-2" />
-      <div className="w-full h-1 bg-warm-plum/15 rounded-full" />
-      <div className="w-2/3 h-1 bg-warm-plum/15 rounded-full mt-2" />
-    </Polaroid>
-
-    <Polaroid
-      rotate={-2}
-      x={0}
-      y={0}
-      gradient="linear-gradient(135deg, #fce4e6 0%, #f6f6f3 50%, #e0e0d9 100%)"
-      caption="Cuéntame otra vez la historia."
-      date="HOY"
-      delay={0.95}
-      z={3}
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
-          <Heart size={20} className="text-warm-accent" fill="currentColor" />
-        </div>
-        <div className="flex-1">
-          <div className="w-3/4 h-1.5 bg-warm-plum/15 rounded-full" />
-          <div className="w-1/2 h-1.5 bg-warm-plum/15 rounded-full mt-2" />
-        </div>
-      </div>
-    </Polaroid>
-  </div>
-);
-
-const StepConnector = () => (
-  <svg
-    viewBox="0 0 1200 60"
-    className="hidden md:block absolute top-12 left-0 right-0 w-full h-12 pointer-events-none"
-    preserveAspectRatio="none"
-    aria-hidden
-  >
-    <motion.path
-      d="M 100 30 Q 300 0, 500 30 T 900 30 T 1100 30"
-      fill="none"
-      stroke="#7e238b"
-      strokeWidth="2"
-      strokeDasharray="4 8"
-      strokeLinecap="round"
-      initial={{ pathLength: 0, opacity: 0 }}
-      whileInView={{ pathLength: 1, opacity: 0.6 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 1.6, ease: "easeInOut" }}
-    />
-  </svg>
-);
 
 // ---------------- beta waitlist (fake door) ----------------
 const BetaWaitlist = () => {
@@ -370,111 +233,108 @@ const BetaWaitlist = () => {
   };
 
   return (
-    <section id="beta" className="px-6 py-20 sm:py-28 bg-warm-fog">
+    <section id="beta" className="px-6 py-24 sm:py-32">
       <FadeIn>
-        <div className="relative max-w-3xl mx-auto bg-warm-plum text-white rounded-[40px] p-10 sm:p-14 overflow-hidden">
-          <motion.div
-            aria-hidden
-            className="absolute -top-20 -right-16 w-72 h-72 rounded-full bg-warm-accent/20 blur-3xl"
-            animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.6, 0.4] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <div className="relative">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-light/80 mb-4 flex items-center gap-2">
-              <Sparkles size={14} />
-              Acceso anticipado · cupos limitados
-            </p>
-            <h2 className="font-serif text-3xl sm:text-4xl mb-4 tracking-tight">
-              Sé de los primeros en probar Presence.
-            </h2>
-            <p className="text-warm-light text-base sm:text-lg max-w-xl mb-8 leading-relaxed">
-              Estamos abriendo la beta privada a un grupo pequeño de early adopters.
-              Déjanos tu nombre y tu correo de Google y te escribiremos en cuanto
-              tengamos tu lugar listo.
-            </p>
+        <div className="max-w-3xl mx-auto bg-black text-white rounded-[40px] p-10 sm:p-14">
+          <p className="eyebrow text-white/50 mb-6">
+            Acceso anticipado · cupos limitados
+          </p>
+          <h2 className="font-serif text-4xl sm:text-5xl mb-4 leading-[1.05]">
+            Sé de los primeros en probar{" "}
+            <em className="text-white/60">Presence.</em>
+          </h2>
+          <p className="text-white/60 text-base sm:text-lg max-w-xl mb-10 leading-relaxed">
+            Estamos abriendo la beta privada a un grupo pequeño de early
+            adopters. Déjanos tu nombre y correo y te escribiremos en cuanto
+            tengamos tu lugar listo.
+          </p>
 
-            {status === "done" ? (
-              <motion.div
-                initial={reduce ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-3 bg-white/10 rounded-2xl p-5"
-              >
-                <CheckCircle2 className="shrink-0 text-warm-accent mt-0.5" size={24} />
+          {status === "done" ? (
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3 bg-white/10 rounded-2xl p-5"
+            >
+              <CheckCircle2 className="shrink-0 text-white mt-0.5" size={24} />
+              <div>
+                <p className="font-medium text-white">
+                  ¡Listo, {fullName.split(" ")[0]}!
+                </p>
+                <p className="text-white/60 text-sm mt-1">{message}</p>
+              </div>
+            </motion.div>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="font-semibold text-white">¡Listo, {fullName.split(" ")[0]}!</p>
-                  <p className="text-warm-light text-sm mt-1">{message}</p>
+                  <label htmlFor="beta-name" className="sr-only">
+                    Nombre completo
+                  </label>
+                  <input
+                    id="beta-name"
+                    type="text"
+                    required
+                    autoComplete="name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Nombre completo"
+                    className="w-full bg-white text-black placeholder:text-warm-silver rounded-full px-6 py-3.5 outline-none focus:ring-2 focus:ring-white/40 transition"
+                  />
                 </div>
-              </motion.div>
-            ) : (
-              <form onSubmit={onSubmit} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="beta-name" className="sr-only">
-                      Nombre completo
-                    </label>
-                    <input
-                      id="beta-name"
-                      type="text"
-                      required
-                      autoComplete="name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Nombre completo"
-                      className="w-full bg-white/95 text-warm-plum placeholder:text-warm-silver rounded-2xl px-5 py-3.5 outline-none focus:ring-2 focus:ring-warm-accent transition"
-                    />
-                  </div>
-                  <div className="relative">
-                    <label htmlFor="beta-email" className="sr-only">
-                      Correo de Google
-                    </label>
-                    <Mail
-                      size={18}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-silver pointer-events-none"
-                    />
-                    <input
-                      id="beta-email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tucorreo@gmail.com"
-                      className="w-full bg-white/95 text-warm-plum placeholder:text-warm-silver rounded-2xl pl-11 pr-5 py-3.5 outline-none focus:ring-2 focus:ring-warm-accent transition"
-                    />
-                  </div>
+                <div className="relative">
+                  <label htmlFor="beta-email" className="sr-only">
+                    Correo de Google
+                  </label>
+                  <Mail
+                    size={18}
+                    className="absolute left-5 top-1/2 -translate-y-1/2 text-warm-silver pointer-events-none"
+                  />
+                  <input
+                    id="beta-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tucorreo@gmail.com"
+                    className="w-full bg-white text-black placeholder:text-warm-silver rounded-full pl-12 pr-6 py-3.5 outline-none focus:ring-2 focus:ring-white/40 transition"
+                  />
                 </div>
+              </div>
 
-                {status === "error" && (
-                  <p className="text-sm text-warm-accent bg-white/10 rounded-xl px-4 py-2.5">
-                    {message}
-                  </p>
-                )}
+              {status === "error" && (
+                <p className="text-sm text-white bg-white/10 rounded-xl px-4 py-2.5">
+                  {message}
+                </p>
+              )}
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <button
-                    type="submit"
-                    disabled={status === "loading"}
-                    className="group inline-flex items-center justify-center gap-2 bg-warm-accent hover:bg-warm-accent-hover disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold px-7 py-3.5 rounded-2xl transition shadow-lg hover:shadow-xl"
-                  >
-                    {status === "loading" ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Guardando…
-                      </>
-                    ) : (
-                      <>
-                        Quiero mi acceso
-                        <ArrowRight size={18} className="transition group-hover:translate-x-1" />
-                      </>
-                    )}
-                  </button>
-                  <p className="text-xs text-warm-light/70 max-w-xs">
-                    Sin spam. Solo te escribimos para tu invitación a la beta.
-                  </p>
-                </div>
-              </form>
-            )}
-          </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="group inline-flex items-center justify-center gap-2 bg-white text-black font-medium px-8 py-3.5 rounded-full transition-transform duration-200 hover:scale-[1.03] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {status === "loading" ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Guardando…
+                    </>
+                  ) : (
+                    <>
+                      Quiero mi acceso
+                      <ArrowRight
+                        size={18}
+                        className="transition group-hover:translate-x-1"
+                      />
+                    </>
+                  )}
+                </button>
+                <p className="text-xs text-white/40 max-w-xs">
+                  Sin spam. Solo te escribimos para tu invitación a la beta.
+                </p>
+              </div>
+            </form>
+          )}
         </div>
       </FadeIn>
     </section>
@@ -498,408 +358,317 @@ export const Landing = () => {
   }, [isAuthed, navigate]);
 
   return (
-    <div className="min-h-full bg-white text-warm-plum">
-      {/* NAV */}
-      <nav className="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-warm-sand">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="text-2xl font-serif text-warm-plum">
-            Presence
-          </Link>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link
-              to="/pricing"
-              className="hidden sm:inline-block text-sm font-semibold text-warm-olive hover:text-warm-plum px-3 py-2 transition"
-            >
-              Precios
+    <div className="relative min-h-screen w-full overflow-hidden bg-white text-black">
+      {/* CINEMATIC OPENING: video + nav + hero share one viewport */}
+      <div className="relative min-h-screen w-full overflow-hidden">
+        <HeroVideo />
+
+        {/* NAV */}
+        <nav className="relative z-10">
+          <div className="max-w-7xl mx-auto flex justify-between items-center px-8 py-6">
+            <Link to="/" className="font-serif text-3xl tracking-tight text-warm-plum">
+              Presence<sup className="text-sm">®</sup>
             </Link>
-            <Link
-              to="/login"
-              className="hidden sm:inline-block text-sm font-semibold text-warm-olive hover:text-warm-plum px-3 py-2 transition"
+            <div className="hidden md:flex items-center gap-8">
+              <Link to="/" className="text-sm text-warm-plum transition-colors">
+                Inicio
+              </Link>
+              <a
+                href="#pilares"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
+              >
+                Producto
+              </a>
+              <Link
+                to="/pricing"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
+              >
+                Precios
+              </Link>
+              <Link
+                to="/help"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
+              >
+                Ayuda
+              </Link>
+              <Link
+                to="/login"
+                className="text-sm text-warm-olive hover:text-warm-plum transition-colors"
+              >
+                Iniciar sesión
+              </Link>
+            </div>
+            <a
+              href="#beta"
+              className="rounded-pill px-6 py-2.5 text-sm bg-warm-accent text-on-ink transition-transform duration-hover ease-cinematic hover:scale-lift"
             >
-              Iniciar sesión
-            </Link>
-            <Link
-              to="/register"
-              className="inline-block bg-warm-accent hover:bg-warm-accent-hover text-white text-sm font-bold px-5 py-2.5 rounded-2xl transition shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-transform duration-200"
-            >
-              Crear cuenta
-            </Link>
+              Únete a la beta
+            </a>
+          </div>
+        </nav>
+
+        {/* HERO */}
+        <section
+          className="relative z-10 flex flex-col items-center justify-center text-center px-6 pb-40"
+          style={{ paddingTop: "calc(8rem - 75px)" }}
+        >
+          <h1 className="animate-fade-rise font-serif font-normal text-5xl sm:text-7xl md:text-8xl max-w-7xl text-warm-plum leading-display tracking-display">
+            Más allá del <em className="text-warm-olive">silencio,</em>
+            <br />
+            la memoria sigue <em className="text-warm-olive">viva.</em>
+          </h1>
+          <p className="animate-fade-rise-delay text-base sm:text-lg max-w-2xl mt-8 leading-relaxed text-warm-olive">
+            Presence convierte biografías, fotos y voces en una IA con la que
+            puedes conversar — para honrar, recordar y mantener viva la
+            presencia de quienes te importan.
+          </p>
+          <a
+            href="#beta"
+            className="animate-fade-rise-delay-2 rounded-pill px-14 py-5 text-base mt-12 bg-warm-accent text-on-ink transition-transform duration-hover ease-cinematic hover:scale-lift"
+          >
+            Únete a la beta
+          </a>
+          {/* Deliberately warm-olive rather than the warm-silver used for fine
+              print elsewhere: this line sits deepest into the video, where the
+              scrim is weakest, and #A3A3A3 disappeared against the footage. */}
+          <p className="animate-fade-rise-delay-3 text-xs text-warm-olive mt-6">
+            Acceso anticipado gratuito · cupos limitados para early adopters.
+          </p>
+        </section>
+      </div>
+
+      {/* PILLARS */}
+      <section id="pilares" className="px-6 py-24 sm:py-32 border-t border-warm-sand">
+        <div className="max-w-7xl mx-auto">
+          <FadeIn>
+            <p className="eyebrow mb-4">
+              Cuatro pilares
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl text-black max-w-3xl leading-[1.02]">
+              Un legado completo,{" "}
+              <em className="text-warm-olive">construido con cuidado.</em>
+            </h2>
+            <p className="text-warm-olive max-w-2xl mt-6 mb-16 text-lg leading-relaxed">
+              Dos para recordar a quienes ya no están, dos para preparar lo que
+              tu familia necesitará. Todos disponibles hoy.
+            </p>
+          </FadeIn>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-10 gap-y-12">
+            {pillars.map((p, i) => (
+              <FadeIn key={p.title} delay={i * 0.08}>
+                <div className="border-t border-black pt-6 h-full">
+                  <p className="font-mono text-xs text-warm-silver mb-4">{p.n}</p>
+                  <h3 className="font-serif text-2xl text-black mb-3">
+                    {p.title}
+                  </h3>
+                  <p className="text-sm text-warm-olive leading-relaxed">
+                    {p.desc}
+                  </p>
+                </div>
+              </FadeIn>
+            ))}
           </div>
         </div>
-      </nav>
+      </section>
 
-      {/* HERO */}
-      <section className="relative px-6 pt-16 pb-24 sm:pt-24 sm:pb-32 overflow-hidden">
-        <FloatingOrbs />
-        <motion.div
-          className="relative max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-16 items-center"
-          variants={container}
-          initial="hidden"
-          animate="show"
-        >
-          <div className="lg:col-span-7">
-            <motion.p
-              variants={item}
-              className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-5 flex items-center gap-2"
-            >
-              <span className="inline-block w-8 h-px bg-warm-silver" />
-              Plataforma de legado digital
-            </motion.p>
-            <motion.h1
-              variants={item}
-              className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05] text-warm-plum mb-6"
-            >
-              La memoria de quienes amas,{" "}
-              <span className="relative inline-block text-warm-accent">
-                viva para siempre
-                <WavyUnderline />
-              </span>
-              .
-            </motion.h1>
-            <motion.p
-              variants={item}
-              className="text-lg text-warm-olive max-w-xl mb-8 leading-relaxed"
-            >
-              Presence convierte biografías, fotos y voces en una IA con la que puedes
-              conversar — para honrar, recordar y mantener viva la presencia de quienes
-              te importan.
-            </motion.p>
-            <motion.div variants={item} className="flex flex-wrap gap-3">
-              <a
-                href="#beta"
-                className="group inline-flex items-center gap-2 bg-warm-accent hover:bg-warm-accent-hover text-white font-bold px-6 py-3 rounded-2xl transition shadow-sm hover:shadow-lg"
-              >
-                Únete a la beta privada
-                <motion.span
-                  className="inline-block"
-                  whileHover={{ x: 4 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ArrowRight size={18} />
-                </motion.span>
-              </a>
-              <a
-                href="#como-funciona"
-                className="inline-flex items-center bg-warm-sand hover:bg-warm-light text-warm-plum font-semibold px-6 py-3 rounded-2xl transition"
-              >
-                Cómo funciona
-              </a>
-            </motion.div>
-            <motion.p variants={item} className="text-xs text-warm-silver mt-6">
-              Acceso anticipado gratuito · cupos limitados para early adopters.
-            </motion.p>
+      {/* HOW IT WORKS */}
+      <section
+        id="como-funciona"
+        className="px-6 py-24 sm:py-32 bg-warm-fog border-t border-warm-sand"
+      >
+        <div className="max-w-7xl mx-auto">
+          <FadeIn>
+            <p className="eyebrow mb-4">
+              Cómo funciona
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl text-black mb-16 leading-[1.02]">
+              Tres pasos <em className="text-warm-olive">para empezar.</em>
+            </h2>
+          </FadeIn>
+
+          <div className="grid md:grid-cols-3 gap-x-10 gap-y-12">
+            {steps.map((s, i) => (
+              <FadeIn key={s.n} delay={i * 0.1}>
+                <p className="font-serif text-6xl text-warm-sand mb-4 select-none">
+                  {s.n}
+                </p>
+                <h3 className="font-serif text-2xl text-black mb-3">{s.title}</h3>
+                <p className="text-warm-olive leading-relaxed">{s.desc}</p>
+              </FadeIn>
+            ))}
           </div>
+        </div>
+      </section>
 
-          <motion.div variants={item} className="lg:col-span-5 relative">
-            <PolaroidStack />
-          </motion.div>
-        </motion.div>
+      {/* SERVICES — módulos de "Mi legado" */}
+      <section className="px-6 py-24 sm:py-32 border-t border-warm-sand">
+        <div className="max-w-7xl mx-auto">
+          <FadeIn>
+            <p className="eyebrow mb-4">
+              Servicios de planificación
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl text-black max-w-3xl leading-[1.02]">
+              Que quienes amas{" "}
+              <em className="text-warm-olive">no tengan que adivinar.</em>
+            </h2>
+            <p className="text-warm-olive max-w-2xl mt-6 mb-16 text-lg leading-relaxed">
+              Planifica hoy lo que tu familia necesitará. Cada módulo se llena
+              en minutos y se actualiza cuando quieras.
+            </p>
+          </FadeIn>
+
+          <div className="divide-y divide-[#E8E8E8] border-y border-warm-sand">
+            {SERVICES_LIST.map((s, i) => (
+              <FadeIn key={s.slug} delay={i * 0.05}>
+                <Link
+                  to={`/servicios/${s.slug}`}
+                  className="group flex items-center justify-between gap-6 py-8 px-2 hover:bg-warm-fog transition-colors"
+                >
+                  <div>
+                    <h3 className="font-serif text-2xl sm:text-3xl text-black group-hover:text-warm-olive transition-colors">
+                      {s.eyebrow}
+                    </h3>
+                    <p className="text-sm text-warm-olive leading-relaxed mt-2 max-w-2xl">
+                      {s.tagline}
+                    </p>
+                  </div>
+                  <ArrowRight
+                    size={24}
+                    className="shrink-0 text-warm-silver group-hover:text-black group-hover:translate-x-1 transition-all"
+                  />
+                </Link>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRUST */}
+      <section className="px-6 py-24 sm:py-32 bg-warm-fog border-t border-warm-sand">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-start">
+          <FadeIn className="lg:col-span-5">
+            <p className="eyebrow mb-4">
+              Confianza y privacidad
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl text-black leading-[1.02]">
+              Tus recuerdos son{" "}
+              <em className="text-warm-olive">solo tuyos.</em>
+            </h2>
+            <p className="text-warm-olive mt-6 leading-relaxed">
+              Los archivos privados de quienes amas nunca se usan para entrenar
+              modelos públicos. Construimos Presence con el respeto que esos
+              recuerdos merecen.
+            </p>
+          </FadeIn>
+          <div className="lg:col-span-7 space-y-10 lg:pt-12">
+            {trust.map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <FadeIn key={t.title} delay={i * 0.08}>
+                  <div className="flex gap-5 border-t border-black pt-6">
+                    <Icon size={20} className="shrink-0 text-black mt-1" />
+                    <div>
+                      <h3 className="font-serif text-xl text-black mb-1">
+                        {t.title}
+                      </h3>
+                      <p className="text-sm text-warm-olive leading-relaxed">
+                        {t.desc}
+                      </p>
+                    </div>
+                  </div>
+                </FadeIn>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       {/* BETA WAITLIST (fake door) */}
       <BetaWaitlist />
 
-      {/* DIVIDER */}
-      <hr className="border-warm-sand" />
-
-      {/* PILLARS */}
-      <section className="px-6 py-20 sm:py-28">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
-              Cuatro pilares
-            </p>
-            <h2 className="font-serif text-4xl sm:text-5xl text-warm-plum mb-4 max-w-2xl tracking-tight">
-              Un legado completo, construido con cuidado.
-            </h2>
-            <p className="text-warm-olive max-w-2xl mb-12 text-lg">
-              Dos para recordar a quienes ya no están, dos para preparar lo que tu familia
-              necesitará el día que tú no estés. Todos disponibles hoy.
-            </p>
-          </FadeIn>
-
-          <motion.div
-            className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            {pillars.map((p) => {
-              const Icon = p.icon;
-              return (
-                <motion.div
-                  key={p.title}
-                  variants={item}
-                  whileHover={{ y: -6 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-white border border-warm-sand rounded-3xl p-6 hover:border-warm-silver hover:shadow-lg transition-shadow flex flex-col"
-                >
-                  <motion.div
-                    className="w-12 h-12 rounded-2xl bg-warm-light flex items-center justify-center mb-5"
-                    whileHover={{ rotate: -8, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Icon size={22} className="text-warm-plum" />
-                  </motion.div>
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <h3 className="font-bold text-warm-plum text-lg">{p.title}</h3>
-                    {p.status === "soon" && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-warm-olive bg-warm-fog border border-warm-sand px-2 py-0.5 rounded-full">
-                        Próximamente
-                      </span>
-                    )}
-                    {p.status === "available" && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-warm-accent px-2 py-0.5 rounded-full">
-                        Disponible
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-warm-olive leading-relaxed">{p.desc}</p>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="como-funciona" className="px-6 py-20 sm:py-28 bg-warm-fog relative">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
-              Cómo funciona
-            </p>
-            <h2 className="font-serif text-4xl sm:text-5xl text-warm-plum mb-12 max-w-xl tracking-tight">
-              Tres pasos para empezar.
-            </h2>
-          </FadeIn>
-
-          <div className="relative">
-            <StepConnector />
-            <motion.div
-              className="grid md:grid-cols-3 gap-8 relative"
-              variants={container}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
-            >
-              {steps.map((s) => (
-                <motion.div key={s.n} variants={item} className="relative">
-                  <motion.div
-                    className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white border border-warm-sand text-warm-accent font-mono text-sm font-bold mb-5 shadow-sm"
-                    whileHover={{ scale: 1.08, rotate: 4 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {s.n}
-                  </motion.div>
-                  <h3 className="font-serif text-2xl text-warm-plum mb-3">{s.title}</h3>
-                  <p className="text-warm-olive leading-relaxed">{s.desc}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* SERVICIOS — los 5 módulos de "Mi legado" + organizador patrimonial */}
-      <section className="px-6 py-20 sm:py-28 bg-warm-fog">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
-              Servicios de planificación
-            </p>
-            <h2 className="font-serif text-4xl sm:text-5xl text-warm-plum mb-4 max-w-2xl tracking-tight">
-              Cinco módulos para que quienes amas no tengan que adivinar nada.
-            </h2>
-            <p className="text-warm-olive max-w-2xl mb-12 text-lg">
-              Planifica hoy lo que tu familia necesitará el día que no estés. Cada
-              módulo se llena en minutos y se actualiza cuando quieras.
-            </p>
-          </FadeIn>
-
-          <motion.div
-            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            {SERVICES_LIST.map((s) => {
-              const SIcon = s.icon;
-              return (
-                <motion.div key={s.slug} variants={item}>
-                  <Link
-                    to={`/servicios/${s.slug}`}
-                    className="block bg-white border border-warm-sand rounded-3xl p-6 hover:border-warm-silver hover:shadow-lg transition-shadow group h-full"
-                  >
-                    <motion.div
-                      className="w-12 h-12 rounded-2xl bg-warm-light flex items-center justify-center mb-5"
-                      whileHover={{ rotate: -8, scale: 1.05 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <SIcon size={22} className="text-warm-plum" />
-                    </motion.div>
-                    <h3 className="font-serif text-2xl text-warm-plum mb-2">{s.eyebrow}</h3>
-                    <p className="text-sm text-warm-olive leading-relaxed mb-4">
-                      {s.tagline}
-                    </p>
-                    <span className="text-xs font-bold text-warm-accent inline-flex items-center gap-1.5 group-hover:gap-2.5 transition-all">
-                      Conocer más
-                      <ArrowRight size={14} />
-                    </span>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* TRUST */}
-      <section className="px-6 py-20 sm:py-28">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-12 gap-12 items-start">
-            <FadeIn className="lg:col-span-5">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
-                Confianza y privacidad
-              </p>
-              <h2 className="font-serif text-4xl sm:text-5xl text-warm-plum tracking-tight">
-                Tus recuerdos son solo tuyos.
-              </h2>
-              <p className="text-warm-olive mt-5 leading-relaxed">
-                Los archivos privados de quienes amas nunca se usan para entrenar
-                modelos públicos. Construimos Presence con el respeto que esos
-                recuerdos merecen.
-              </p>
-            </FadeIn>
-            <motion.div
-              className="lg:col-span-7 space-y-4"
-              variants={container}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
-            >
-              {trust.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <motion.div
-                    key={t.title}
-                    variants={item}
-                    whileHover={{ x: 4 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex gap-4 bg-white border border-warm-sand rounded-3xl p-6 hover:border-warm-silver hover:shadow-md transition-shadow"
-                  >
-                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-warm-light flex items-center justify-center">
-                      <Icon size={20} className="text-warm-plum" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-warm-plum mb-1">{t.title}</h3>
-                      <p className="text-sm text-warm-olive leading-relaxed">{t.desc}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
       {/* FINAL CTA */}
-      <section className="px-6 pb-24">
+      <section className="px-6 pb-32 text-center">
         <FadeIn>
-          <div className="relative max-w-5xl mx-auto bg-warm-plum text-white rounded-[40px] p-12 sm:p-16 text-center overflow-hidden">
-            {/* decorative orbs inside CTA */}
-            <motion.div
-              aria-hidden
-              className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-warm-accent/20 blur-3xl"
-              animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.6, 0.4] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <motion.div
-              aria-hidden
-              className="absolute -bottom-24 -left-16 w-80 h-80 rounded-full bg-warm-accent/10 blur-3xl"
-              animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            />
-            <div className="relative">
-              <h2 className="font-serif text-4xl sm:text-5xl mb-5 tracking-tight">
-                Asegura tu lugar.
-              </h2>
-              <p className="text-warm-light text-lg max-w-xl mx-auto mb-8 leading-relaxed">
-                La beta privada abre con cupos limitados. Déjanos tus datos y serás de
-                los primeros en construir tu primer Memory Vault.
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center">
-                <a
-                  href="#beta"
-                  className="inline-flex items-center gap-2 bg-warm-accent hover:bg-warm-accent-hover text-white font-bold px-7 py-3.5 rounded-2xl transition shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform duration-200"
-                >
-                  Quiero mi acceso anticipado
-                  <ArrowRight size={18} />
-                </a>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center bg-white/10 hover:bg-white/20 text-white font-semibold px-7 py-3.5 rounded-2xl transition"
-                >
-                  Ya tengo cuenta
-                </Link>
-              </div>
-            </div>
+          <h2
+            className="font-serif text-5xl sm:text-7xl text-black leading-[0.98]"
+            style={{ letterSpacing: "-1.5px" }}
+          >
+            Asegura <em className="text-warm-olive">tu lugar.</em>
+          </h2>
+          <p className="text-warm-olive text-lg max-w-xl mx-auto mt-6 leading-relaxed">
+            La beta privada abre con cupos limitados. Serás de los primeros en
+            construir tu Memory Vault.
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center mt-10">
+            <a
+              href="#beta"
+              className="rounded-full px-10 py-4 bg-black text-white transition-transform duration-200 hover:scale-[1.03]"
+            >
+              Quiero mi acceso anticipado
+            </a>
+            <Link
+              to="/login"
+              className="rounded-full px-10 py-4 border border-warm-sand text-black hover:border-black transition-colors"
+            >
+              Ya tengo cuenta
+            </Link>
           </div>
         </FadeIn>
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-warm-dark text-warm-silver rounded-t-[40px]">
-        <div className="max-w-6xl mx-auto px-6 py-14">
-          <div className="grid md:grid-cols-4 gap-8 mb-10">
+      <footer className="bg-black text-warm-silver">
+        <div className="max-w-7xl mx-auto px-8 py-16">
+          <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
-              <p className="font-serif text-3xl text-white mb-3">Presence</p>
+              <p className="font-serif text-3xl text-white mb-3">
+                Presence<sup className="text-sm">®</sup>
+              </p>
               <p className="text-sm leading-relaxed max-w-sm">
-                Plataforma de legado digital. La memoria de quienes amas, viva para
-                siempre.
+                Plataforma de legado digital. La memoria de quienes amas, viva
+                para siempre.
               </p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-white mb-4">
+              <p className="eyebrow text-white mb-5">
                 Producto
               </p>
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-3 text-sm">
                 <li>
-                  <Link to="/register" className="hover:text-white transition">
+                  <Link to="/register" className="hover:text-white transition-colors">
                     Crear cuenta
                   </Link>
                 </li>
                 <li>
-                  <Link to="/login" className="hover:text-white transition">
+                  <Link to="/login" className="hover:text-white transition-colors">
                     Iniciar sesión
                   </Link>
                 </li>
                 <li>
-                  <a href="#como-funciona" className="hover:text-white transition">
+                  <a href="#como-funciona" className="hover:text-white transition-colors">
                     Cómo funciona
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-white mb-4">
+              <p className="eyebrow text-white mb-5">
                 Legal
               </p>
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-3 text-sm">
                 <li>
-                  <Link to="/privacy" className="hover:text-white transition">
+                  <Link to="/privacy" className="hover:text-white transition-colors">
                     Privacidad
                   </Link>
                 </li>
                 <li>
-                  <Link to="/terms" className="hover:text-white transition">
+                  <Link to="/terms" className="hover:text-white transition-colors">
                     Términos
                   </Link>
                 </li>
                 <li>
-                  <Link to="/cookies" className="hover:text-white transition">
+                  <Link to="/cookies" className="hover:text-white transition-colors">
                     Cookies
                   </Link>
                 </li>
@@ -908,7 +677,7 @@ export const Landing = () => {
           </div>
           <div className="border-t border-white/10 pt-6 flex flex-wrap items-center justify-between gap-4 text-xs">
             <p>© {new Date().getFullYear()} Presence. Todos los derechos reservados.</p>
-            <p className="text-warm-silver">Hecho con cuidado.</p>
+            <p>Hecho con cuidado.</p>
           </div>
         </div>
       </footer>

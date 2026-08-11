@@ -1,0 +1,7 @@
+/* Display: Instrument Serif — headings, logo, editorial emphasis.
+   Body: Inter — navigation, descriptions, UI.
+
+   `display=swap` renders the fallback immediately instead of holding the hero
+   blank while the serif downloads. The family stacks themselves live in
+   tokens.css as --font-display / --font-body. */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap");

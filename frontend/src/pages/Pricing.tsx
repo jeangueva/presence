@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, Heart, Sparkles, X } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { PLAN_ORDER, PLANS, type PlanId } from "../lib/plans";
@@ -9,19 +9,25 @@ import { useMeta } from "../hooks/useMeta";
 import { useStructuredData } from "../hooks/useStructuredData";
 import { buildPricingSchema } from "../lib/seo";
 
+type LivePricing = {
+  enabled: boolean;
+  currency: string;
+  plans: Record<PlanId, { billing: string; amount: number | null; purchasable: boolean }>;
+};
+
 export const Pricing = () => {
   useMeta({
     title: "Precios",
     description:
-      "Tres planes para preservar memorias: Free, Personal $9/mes y Family $19/mes. Cancela cuando quieras, exporta tus datos siempre.",
+      "Memorial gratis para siempre. Legado por $99 en un pago único. Vault IA por $12/mes. Exporta tus datos siempre.",
     canonical: "/pricing",
   });
   useStructuredData(
     buildPricingSchema(
-      PLAN_ORDER.filter((id) => id !== "free").map((id) => ({
+      PLAN_ORDER.filter((id) => PLANS[id].billing !== "free").map((id) => ({
         name: PLANS[id].name,
         description: PLANS[id].tagline,
-        priceMonthlyUsd: PLANS[id].price_usd_monthly,
+        priceMonthlyUsd: PLANS[id].price_usd,
       }))
     )
   );
@@ -30,13 +36,51 @@ export const Pricing = () => {
   const [loading, setLoading] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // The USD figures in plans.ts are for copy and structured data; MercadoPago
+  // charges in the account's local currency. Show what will actually be
+  // charged — a page that quotes one number and bills another is how you earn
+  // chargebacks. Falls back to USD if billing isn't configured yet.
+  const [pricing, setPricing] = useState<LivePricing | null>(null);
+  useEffect(() => {
+    api
+      .get<LivePricing>("/billing/pricing")
+      .then((r) => setPricing(r.data.enabled ? r.data : null))
+      .catch(() => setPricing(null));
+  }, []);
+
+  const priceFor = (id: PlanId) => {
+    const plan = PLANS[id];
+    // Never run the free tier through currency formatting — "0 COP" reads like
+    // a broken price where "$0" reads like the offer.
+    if (plan.billing === "free") return { text: "$0", suffix: "" };
+    const live = pricing?.plans[id];
+    if (!live || live.amount == null) {
+      return { text: `$${plan.price_usd}`, suffix: "USD" };
+    }
+    return {
+      text: new Intl.NumberFormat("es", {
+        style: "currency",
+        currency: pricing!.currency,
+        maximumFractionDigits: 0,
+      }).format(live.amount),
+      suffix: "",
+    };
+  };
+
   const subscribe = async (planId: PlanId) => {
-    if (planId === "free") {
+    if (PLANS[planId].billing === "free") {
       navigate(isAuthed ? "/app" : "/register");
       return;
     }
     if (!isAuthed) {
       navigate(`/register?from=pricing&plan=${planId}`);
+      return;
+    }
+    // One-time purchases run on our own page via Checkout Bricks. Only the
+    // subscription still needs MercadoPago's hosted flow — preapproval has no
+    // Brick equivalent.
+    if (PLANS[planId].billing === "one_time") {
+      navigate(`/checkout/${planId}`);
       return;
     }
     setError(null);
@@ -53,13 +97,12 @@ export const Pricing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-warm-plum">
+    <div className="min-h-screen bg-white text-warm-plum animate-page-fade">
       {/* Header simple */}
       <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-warm-sand">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="text-2xl font-serif text-warm-plum inline-flex items-center gap-2">
-            <Heart size={20} className="text-warm-accent" fill="currentColor" />
-            Presence
+          <Link to="/" className="text-2xl font-serif tracking-tight text-warm-plum">
+            Presence<sup className="text-xs">®</sup>
           </Link>
           <div className="flex items-center gap-3">
             {!isAuthed ? (
@@ -89,15 +132,16 @@ export const Pricing = () => {
         />
         <div className="relative max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+            <p className="eyebrow mb-3">
               Precios simples
             </p>
             <h1 className="font-serif text-5xl sm:text-6xl text-warm-plum mb-4">
               Elige el plan a tu medida.
             </h1>
             <p className="text-warm-olive text-lg max-w-xl mx-auto">
-              Empieza gratis. Crece cuando estés listo. Cancela cuando quieras — los datos
-              de tus vaults siempre son tuyos.
+              El memorial es gratis para siempre. Legado se paga una sola vez.
+              Solo el chat con IA es mensual, porque es lo único que cuesta cada
+              vez que lo usas.
             </p>
           </div>
 
@@ -110,7 +154,8 @@ export const Pricing = () => {
           <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {PLAN_ORDER.map((id) => {
               const plan = PLANS[id];
-              const featured = id === "personal";
+              // Legado is the product we actually want people to buy.
+              const featured = id === "legado";
               return (
                 <motion.div
                   key={id}
@@ -133,9 +178,20 @@ export const Pricing = () => {
                   <p className="text-sm text-warm-olive mb-5">{plan.tagline}</p>
                   <div className="mb-6">
                     <span className="text-5xl font-bold text-warm-plum">
-                      ${plan.price_usd_monthly}
+                      {priceFor(id).text}
                     </span>
-                    <span className="text-warm-olive ml-1">USD/mes</span>
+                    <span className="text-warm-olive ml-1">
+                      {[
+                        priceFor(id).suffix,
+                        plan.billing === "one_time"
+                          ? "· pago único"
+                          : plan.billing === "monthly"
+                            ? "/mes"
+                            : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </span>
                   </div>
                   <ul className="space-y-2.5 mb-7 flex-1">
                     {plan.highlights.map((h) => (
@@ -147,7 +203,7 @@ export const Pricing = () => {
                   </ul>
                   <button
                     onClick={() => subscribe(id)}
-                    disabled={loading !== null}
+                    disabled={loading !== null || pricing?.plans[id].purchasable === false}
                     className={
                       featured
                         ? "btn-primary w-full inline-flex items-center justify-center gap-2"
@@ -156,12 +212,16 @@ export const Pricing = () => {
                   >
                     {loading === id
                       ? "Cargando..."
-                      : id === "free"
-                      ? isAuthed
-                        ? "Tu plan actual"
-                        : "Empezar gratis"
-                      : `Suscribirme a ${plan.name}`}
-                    {id !== "free" && loading !== id && <Sparkles size={16} />}
+                      : pricing?.plans[id].purchasable === false
+                        ? "Próximamente"
+                        : plan.billing === "free"
+                        ? isAuthed
+                          ? "Tu plan actual"
+                          : "Empezar gratis"
+                        : plan.billing === "one_time"
+                          ? "Comprar Legado"
+                          : "Añadir Vault IA"}
+                    {plan.billing !== "free" && loading !== id && <Sparkles size={16} />}
                   </button>
                 </motion.div>
               );
@@ -170,13 +230,13 @@ export const Pricing = () => {
 
           {/* FAQ / fine print */}
           <div className="max-w-3xl mx-auto mt-20 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+            <p className="eyebrow mb-3">
               Lo que importa saber
             </p>
             <div className="grid sm:grid-cols-3 gap-6 text-sm text-warm-olive mt-6">
               <div>
-                <p className="font-bold text-warm-plum mb-1">Cancela cuando quieras</p>
-                <p>Sin permanencia. Cancelas y conservas acceso hasta el final del periodo pagado.</p>
+                <p className="font-bold text-warm-plum mb-1">Legado no caduca</p>
+                <p>Lo pagas una vez y es tuyo. Si cancelas el Vault IA mensual, conservas Legado completo.</p>
               </div>
               <div>
                 <p className="font-bold text-warm-plum mb-1">Tus datos siempre tuyos</p>

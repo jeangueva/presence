@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, CreditCard, Loader2, Sparkles, X } from "lucide-react";
 import { api } from "../lib/api";
-import { PLAN_ORDER, PLANS, type PlanId } from "../lib/plans";
+import { PLAN_ORDER, PLANS, billingLabel, type PlanId } from "../lib/plans";
 
 type Props = {
   open: boolean;
@@ -12,10 +13,17 @@ type Props = {
 };
 
 export const PlanSelectorModal = ({ open, currentPlanId, onClose, onRequestCancel }: Props) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const subscribe = async (planId: PlanId) => {
+    // One-time purchases go to our own Bricks checkout; only the subscription
+    // still hands off to MercadoPago's hosted page.
+    if (PLANS[planId].billing === "one_time") {
+      navigate(`/checkout/${planId}`);
+      return;
+    }
     setError(null);
     setLoading(planId);
     try {
@@ -63,7 +71,7 @@ export const PlanSelectorModal = ({ open, currentPlanId, onClose, onRequestCance
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <CreditCard size={18} className="text-warm-accent" />
-                <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver">
+                <p className="eyebrow">
                   Cambiar de plan
                 </p>
               </div>
@@ -86,7 +94,7 @@ export const PlanSelectorModal = ({ open, currentPlanId, onClose, onRequestCance
               {PLAN_ORDER.map((id) => {
                 const plan = PLANS[id];
                 const isCurrent = id === currentPlanId;
-                const featured = id === "personal";
+                const featured = id === "legado";
                 return (
                   <div
                     key={id}
@@ -111,9 +119,11 @@ export const PlanSelectorModal = ({ open, currentPlanId, onClose, onRequestCance
                     <h3 className="font-serif text-2xl text-warm-plum mb-1">{plan.name}</h3>
                     <div className="mb-4">
                       <span className="text-3xl font-bold text-warm-plum">
-                        ${plan.price_usd_monthly}
+                        ${plan.price_usd}
                       </span>
-                      <span className="text-sm text-warm-olive ml-1">USD/mes</span>
+                      <span className="text-sm text-warm-olive ml-1">
+                        {billingLabel(plan)}
+                      </span>
                     </div>
                     <ul className="space-y-2 mb-5 flex-1 text-sm">
                       {plan.highlights.slice(0, 5).map((h) => (
@@ -177,8 +187,8 @@ const PlanButton = ({
     );
   }
 
-  if (planId === "free") {
-    // Currently on a paid plan and they want to drop to free → cancel.
+  if (PLANS[planId].billing === "free") {
+    // Currently on a paid plan and they want to drop back → cancel.
     return (
       <button
         type="button"
@@ -191,10 +201,9 @@ const PlanButton = ({
     );
   }
 
-  // Paid plan, not current → subscribe / switch
-  const isUpgrade =
-    currentPlanId === "free" ||
-    (currentPlanId === "personal" && planId === "family");
+  // Paid plan, not current → buy / add on. Anything further along
+  // PLAN_ORDER than where they are counts as an upgrade.
+  const isUpgrade = PLAN_ORDER.indexOf(planId) > PLAN_ORDER.indexOf(currentPlanId);
   return (
     <button
       type="button"

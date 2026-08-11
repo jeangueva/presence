@@ -10,8 +10,14 @@ const router = Router();
 // headers + data.id, not over the raw bytes).
 router.post("/webhook", asyncHandler(c.webhook));
 
+// Public: the pricing page renders before anyone signs in, and it must show
+// the amount that will actually be charged.
+router.get("/pricing", asyncHandler(c.pricing));
+
 router.get("/me", requireAuth, asyncHandler(c.me));
 router.post("/checkout", requireAuth, asyncHandler(c.checkout));
+// Checkout Bricks: the card was tokenized in the browser, this charges it.
+router.post("/process-payment", requireAuth, asyncHandler(c.processPayment));
 router.post("/cancel", requireAuth, asyncHandler(c.cancel));
 
 export default router;

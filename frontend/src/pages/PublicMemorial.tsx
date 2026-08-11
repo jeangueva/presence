@@ -208,7 +208,7 @@ export const PublicMemorial = () => {
               <Heart size={36} className="text-warm-accent" fill="currentColor" />
             </div>
           )}
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+          <p className="eyebrow mb-3">
             En memoria de
           </p>
           <h1 className="font-serif text-5xl sm:text-7xl text-warm-plum leading-tight mb-3">
@@ -230,7 +230,7 @@ export const PublicMemorial = () => {
           className="py-16 px-6"
         >
           <div className="max-w-2xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3 text-center">
+            <p className="eyebrow mb-3 text-center">
               Su historia
             </p>
             <p className="text-lg text-warm-plum/90 leading-relaxed whitespace-pre-wrap">
@@ -250,7 +250,7 @@ export const PublicMemorial = () => {
           className="py-16 px-6 bg-white"
         >
           <div className="max-w-5xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3 text-center">
+            <p className="eyebrow mb-3 text-center">
               Galería
             </p>
             <h2 className="font-serif text-4xl sm:text-5xl text-warm-plum text-center mb-12">
@@ -286,7 +286,7 @@ export const PublicMemorial = () => {
       <section className="py-16 px-6">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+            <p className="eyebrow mb-3">
               Libro de visitas
             </p>
             <h2 className="font-serif text-4xl sm:text-5xl text-warm-plum">

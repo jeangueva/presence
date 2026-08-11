@@ -24,7 +24,7 @@ export const NotFound = () => {
           <Heart size={22} className="text-warm-accent" fill="currentColor" />
           <span className="font-serif text-3xl text-warm-plum">Presence</span>
         </div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-warm-silver mb-3">
+        <p className="eyebrow mb-3">
           Error 404
         </p>
         <h1 className="font-serif text-5xl sm:text-6xl text-warm-plum mb-4">

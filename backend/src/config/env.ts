@@ -33,11 +33,26 @@ const schema = z.object({
   // is empty, billing endpoints return a clear "not configured" error.
   // Currency must match what your MercadoPago account supports (COP/MXN/ARS/BRL/CLP/PEN/UYU).
   // Amounts are in the LOCAL currency (e.g. 36000 COP, 199 MXN, 9000 ARS).
+  // MercadoPago's panel makes you declare ONE product per application, so a
+  // product that sells both a one-time purchase (Checkout API) and a
+  // subscription (Suscripciones) needs two applications — and therefore two
+  // sets of credentials.
+  //
+  // MERCADOPAGO_ACCESS_TOKEN is the Checkout API app (one-time). If the
+  // SUBSCRIPTION_* pair is empty, the same credentials are reused for
+  // preapprovals, which is fine when a single application covers both.
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional().default(""),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional().default(""),
+  // Public key of the Checkout API application. Safe to ship to the
+  // browser — the Payment Brick needs it to tokenize the card client-side so
+  // the raw PAN never reaches our servers.
+  MERCADOPAGO_PUBLIC_KEY: z.string().optional().default(""),
+  MERCADOPAGO_SUBSCRIPTION_ACCESS_TOKEN: z.string().optional().default(""),
+  MERCADOPAGO_SUBSCRIPTION_WEBHOOK_SECRET: z.string().optional().default(""),
   MERCADOPAGO_CURRENCY: z.string().default("COP"),
-  MERCADOPAGO_PRICE_PERSONAL: z.coerce.number().default(36000),
-  MERCADOPAGO_PRICE_FAMILY: z.coerce.number().default(76000),
+  // Legado is a one-time charge, Vault is monthly. Both in LOCAL currency.
+  MERCADOPAGO_PRICE_LEGADO: z.coerce.number().default(396000),
+  MERCADOPAGO_PRICE_VAULT: z.coerce.number().default(48000),
   // Public URL where MercadoPago will POST webhook notifications.
   // In dev use ngrok / cloudflare tunnel; in prod the public API URL.
   BACKEND_PUBLIC_URL: z.string().default(""),
@@ -56,9 +71,28 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional().default(""),
 });
 
-const parsed = schema.safeParse(process.env);
+/**
+ * Drop empty values before validating.
+ *
+ * Hosting dashboards (Render, Cloudflare, Vercel) create a variable as soon as
+ * you name it, even if you never paste a value — so the process receives
+ * `FOO=""` rather than no FOO at all. Zod only applies `.default()` to
+ * `undefined`, so an empty string skips the default entirely: a blank price
+ * coerces to 0, and a blank required field fails validation and kills the boot
+ * with a message nobody reads until the service is already down.
+ */
+const withoutEmpty = Object.fromEntries(
+  Object.entries(process.env).filter(([, v]) => v !== undefined && v.trim() !== "")
+);
+
+const parsed = schema.safeParse(withoutEmpty);
 if (!parsed.success) {
-  console.error("Invalid environment:", parsed.error.flatten().fieldErrors);
+  const missing = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+  console.error(
+    "\n[env] No se puede arrancar — faltan variables o son inválidas:\n" +
+      missing.map((m) => `  · ${m}`).join("\n") +
+      "\n\nRellénalas en Render → tu servicio → Environment, y redeploya.\n"
+  );
   process.exit(1);
 }
 

@@ -15,14 +15,10 @@ import {
   Globe,
   Headphones,
   Loader2,
-  Mail,
   MessageCircle,
   Pencil,
-  Search,
   Sparkles,
   Trash2,
-  UserPlus,
-  Users,
   X,
 } from "lucide-react";
 import { ProfilePhotoUploader } from "../components/ProfilePhotoUploader";
@@ -46,14 +42,6 @@ type Vault = {
   deceased_birth_date?: string | null;
   deceased_death_date?: string | null;
   profile_photo_url?: string | null;
-};
-
-type AccessEntry = {
-  id: string;
-  vault_id: string;
-  email: string;
-  role: string;
-  granted_at: string;
 };
 
 type VaultFile = {
@@ -82,9 +70,6 @@ export const VaultDetail = () => {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"viewer" | "editor">("viewer");
-  const [inviteError, setInviteError] = useState<string | null>(null);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
@@ -92,7 +77,6 @@ export const VaultDetail = () => {
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [editedBio, setEditedBio] = useState("");
   const [isEditingInfo, setIsEditingInfo] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   // Surface tabs: the person stays the same, the way you engage changes. Deep
   // links (e.g. redirects from the old /app/memorials/:id) can preselect one.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -178,36 +162,6 @@ export const VaultDetail = () => {
     mouseY.set(-400);
   };
 
-  const accessQ = useQuery({
-    queryKey: ["vault-access", id],
-    queryFn: async () =>
-      (await api.get<{ entries: AccessEntry[] }>(`/vaults/${id}/access`)).data.entries,
-    enabled: !!id && isOwner,
-  });
-
-  const grantAccess = useMutation({
-    mutationFn: async (payload: { email: string; role: string }) => {
-      await api.post(`/vaults/${id}/access`, payload);
-    },
-    onSuccess: () => {
-      setInviteEmail("");
-      setInviteError(null);
-      qc.invalidateQueries({ queryKey: ["vault-access", id] });
-    },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      setInviteError(msg ?? "No se pudo invitar");
-    },
-  });
-
-  const revokeAccess = useMutation({
-    mutationFn: async (accessId: string) => {
-      await api.delete(`/vaults/${id}/access/${accessId}`);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault-access", id] }),
-  });
-
   const biographyQ = useQuery({
     queryKey: ["vault-biography", id],
     queryFn: async () =>
@@ -252,27 +206,7 @@ export const VaultDetail = () => {
     },
   });
 
-  const activityQ = useQuery({
-    queryKey: ["vault-activity", id],
-    queryFn: async () =>
-      (await api.get<{ entries: Array<{ id: string; action: string; actor_email: string | null; metadata: Record<string, unknown> | null; created_at: string }> }>(
-        `/vaults/${id}/activity`
-      )).data.entries,
-    enabled: !!id && isOwner,
-  });
-
   useDocumentTitle(vaultQ.data?.deceased_name);
-
-  const filteredFiles = (() => {
-    if (!filesQ.data) return [];
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return filesQ.data;
-    return filesQ.data.filter(
-      (f) =>
-        f.file_name?.toLowerCase().includes(q) ||
-        f.transcript?.toLowerCase().includes(q)
-    );
-  })();
 
   const doExport = async () => {
     try {
@@ -384,7 +318,7 @@ export const VaultDetail = () => {
             translateX: "-50%",
             translateY: "-50%",
             background:
-              "radial-gradient(circle, rgba(126, 35, 139, 0.18) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(0, 0, 0, 0.08) 0%, transparent 70%)",
             filter: "blur(40px)",
           }}
         />
@@ -407,7 +341,7 @@ export const VaultDetail = () => {
             />
           ) : null}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+            <p className="eyebrow mb-2">
               Memory Vault
             </p>
             <h1 className="font-serif text-4xl sm:text-5xl text-warm-plum">
@@ -605,36 +539,13 @@ export const VaultDetail = () => {
               </span>
             )}
           </div>
-          {filesQ.data && filesQ.data.length > 3 && (
-            <div className="relative mb-4">
-              <Search
-                size={14}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warm-silver pointer-events-none"
-              />
-              <input
-                className="input pl-10 text-sm"
-                placeholder="Buscar en archivos y transcripciones..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-silver hover:text-warm-plum"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          )}
           <UploadZone
             vaultId={id!}
             onUploaded={() => qc.invalidateQueries({ queryKey: ["vault-files", id] })}
             onQuotaExceeded={(q) => setQuota(q)}
           />
           <div className="mt-5 space-y-2">
-            {filteredFiles.map((f) => {
+            {(filesQ.data ?? []).map((f) => {
               const Icon = fileIcon(f.file_type);
               const isMedia = f.file_type === "audio" || f.file_type === "video";
               const transcribing = isMedia && !f.transcript;
@@ -752,155 +663,6 @@ export const VaultDetail = () => {
           </div>
         </motion.div>
 
-      {/* SHARING (only for owner) */}
-      {isOwner && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="card"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Users size={20} className="text-warm-accent" />
-            <h3 className="font-serif text-2xl text-warm-plum">Compartido con</h3>
-          </div>
-          <p className="text-sm text-warm-olive mb-5">
-            Invita por email a familiares para que vean este vault y conversen con la IA.
-            Necesitan tener una cuenta de Presence con ese email.
-          </p>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!inviteEmail.trim()) return;
-              grantAccess.mutate({ email: inviteEmail.trim(), role: inviteRole });
-            }}
-            className="flex flex-col sm:flex-row gap-2 mb-5"
-          >
-            <div className="relative flex-1">
-              <Mail
-                size={16}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-warm-silver pointer-events-none"
-              />
-              <input
-                type="email"
-                className="input pl-10"
-                placeholder="familiar@email.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-              />
-            </div>
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as "viewer" | "editor")}
-              className="input sm:w-32"
-            >
-              <option value="viewer">Viewer</option>
-              <option value="editor">Editor</option>
-            </select>
-            <button
-              type="submit"
-              disabled={grantAccess.isPending || !inviteEmail.trim()}
-              className="btn-primary inline-flex items-center gap-2 sm:w-auto"
-            >
-              <UserPlus size={16} />
-              {grantAccess.isPending ? "Invitando..." : "Invitar"}
-            </button>
-          </form>
-
-          {inviteError && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-red-700 text-sm bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-4"
-            >
-              {inviteError}
-            </motion.p>
-          )}
-
-          <div className="space-y-2">
-            {accessQ.isLoading && (
-              <div className="h-12 bg-warm-fog rounded-2xl animate-pulse" />
-            )}
-            {accessQ.data && accessQ.data.length === 0 && (
-              <p className="text-sm text-warm-silver italic">
-                Aún no has compartido este vault con nadie.
-              </p>
-            )}
-            <AnimatePresence initial={false}>
-              {accessQ.data?.map((a) => (
-                <motion.div
-                  key={a.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex items-center gap-3 border border-warm-sand rounded-2xl px-4 py-2.5"
-                >
-                  <div className="w-9 h-9 rounded-full bg-warm-accent/10 text-warm-accent font-bold text-sm flex items-center justify-center shrink-0">
-                    {a.email.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-warm-plum truncate">
-                      {a.email}
-                    </p>
-                    <p className="text-xs text-warm-silver capitalize">{a.role}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm(`¿Revocar acceso a ${a.email}?`)) {
-                        revokeAccess.mutate(a.id);
-                      }
-                    }}
-                    disabled={revokeAccess.isPending}
-                    className="text-warm-silver hover:text-warm-accent transition p-1.5 rounded-lg hover:bg-warm-fog disabled:opacity-50"
-                    aria-label="Revocar"
-                    title="Revocar acceso"
-                  >
-                    <X size={16} />
-                  </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ACTIVITY FEED (owner only) */}
-      {isOwner && activityQ.data && activityQ.data.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          className="card"
-        >
-          <h3 className="font-serif text-2xl text-warm-plum mb-4">Actividad reciente</h3>
-          <div className="space-y-2">
-            {activityQ.data.slice(0, 10).map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center gap-3 text-sm border border-warm-sand rounded-2xl px-3 py-2"
-              >
-                <div className="w-8 h-8 rounded-xl bg-warm-light flex items-center justify-center shrink-0 text-xs font-bold text-warm-plum">
-                  {a.actor_email?.charAt(0).toUpperCase() ?? "•"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-warm-plum truncate">
-                    <span className="font-semibold">
-                      {a.actor_email ?? "sistema"}
-                    </span>{" "}
-                    <span className="text-warm-olive">{a.action.replace(/_/g, " ")}</span>
-                  </p>
-                  <p className="text-xs text-warm-silver">
-                    {new Date(a.created_at).toLocaleString("es")}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Heart, PawPrint, Scroll, ScrollText, MessageSquareHeart, Users } from "lucide-react";
+import { Heart, Scroll, ScrollText, MessageSquareHeart } from "lucide-react";
 
 export type ServiceContent = {
   slug: string;
@@ -54,41 +54,6 @@ export const SERVICES: ServiceContent[] = [
     cta: "Empezar a planificar",
   },
   {
-    slug: "cuidado-de-dependientes",
-    eyebrow: "Cuidado de dependientes",
-    title: "Quienes dependen de ti, en buenas manos.",
-    tagline:
-      "Hijos pequeños, padres mayores, hermanos con condiciones especiales. Define quién y cómo se hará cargo si tú faltas.",
-    description:
-      "Registra a las personas que dependen de ti y deja instrucciones claras de cuidado: quién tiene la custodia, cómo contactar a la persona responsable, qué rutinas mantener, qué evitar.",
-    icon: Users,
-    features: [
-      {
-        title: "Lista de dependientes",
-        body: "Cada persona con su nombre, relación contigo, fecha de nacimiento.",
-      },
-      {
-        title: "Persona responsable",
-        body: "El cuidador asignado y cómo contactarlo — teléfono, email, dirección.",
-      },
-      {
-        title: "Notas de cuidado",
-        body: "Médicos de cabecera, medicamentos, rutinas, alergias, escuelas, hábitos.",
-      },
-      {
-        title: "Actualizable en cualquier momento",
-        body: "La vida cambia. Edita el plan cuando los dependientes crezcan o cambien circunstancias.",
-      },
-    ],
-    faqs: [
-      {
-        q: "¿Esto reemplaza la designación legal de tutor?",
-        a: "No, es complementario. El tutor legal se designa ante notario. Aquí dejas las instrucciones del día a día que ningún documento legal cubre.",
-      },
-    ],
-    cta: "Crear mi plan de dependientes",
-  },
-  {
     slug: "ultimos-deseos",
     eyebrow: "Últimos deseos",
     title: "Cómo quieres ser recordada/o.",
@@ -124,41 +89,6 @@ export const SERVICES: ServiceContent[] = [
     cta: "Escribir mis últimos deseos",
   },
   {
-    slug: "cuidado-de-mascotas",
-    eyebrow: "Cuidado de mascotas",
-    title: "Tus mascotas, parte de tu plan.",
-    tagline:
-      "Quién las cuida, qué comen, su veterinario, sus rutinas. Para que no terminen abandonadas o en un refugio.",
-    description:
-      "Registra cada mascota con sus rutinas de alimentación, información veterinaria, persona designada para cuidarla y cualquier dato relevante sobre su salud y comportamiento.",
-    icon: PawPrint,
-    features: [
-      {
-        title: "Ficha por mascota",
-        body: "Nombre, especie, raza, edad. Para cada peludo, plumífero o acuático.",
-      },
-      {
-        title: "Cuidador designado",
-        body: "Quién se hará cargo si tú no estás. Idealmente alguien que ya la conozca.",
-      },
-      {
-        title: "Veterinario y salud",
-        body: "Datos del vet, medicamentos, vacunas pendientes, condiciones a vigilar.",
-      },
-      {
-        title: "Rutinas y preferencias",
-        body: "Qué come y cuántas veces, paseos, juguetes favoritos, miedos.",
-      },
-    ],
-    faqs: [
-      {
-        q: "¿Por qué no solo decirle a un amigo de palabra?",
-        a: "En el momento del shock, los detalles se olvidan. Tener una ficha escrita reduce ese riesgo y le ayuda al cuidador a darle continuidad sin estrés.",
-      },
-    ],
-    cta: "Registrar a mis mascotas",
-  },
-  {
     slug: "mensaje-postumo",
     eyebrow: "Mensaje póstumo",
     title: "Lo que querías decirles, dicho.",
@@ -173,8 +103,8 @@ export const SERVICES: ServiceContent[] = [
         body: "Uno por persona, con asunto y contenido completos. Tantos como quieras.",
       },
       {
-        title: "Entrega verificada (beta)",
-        body: "Hoy la entrega requiere verificación manual del fallecimiento por nuestro equipo, a partir de la documentación que aporta tu persona de confianza. La automatización llega más adelante.",
+        title: "Entrega por check-in automático",
+        body: "Presence te escribe cada cierto tiempo para confirmar que estás bien. Si dejas de responder durante el plazo que tú elijas, avisamos a tus contactos de confianza y, con su confirmación, entregamos los mensajes.",
       },
       {
         title: "Editables hasta el último día",
@@ -188,7 +118,7 @@ export const SERVICES: ServiceContent[] = [
     faqs: [
       {
         q: "¿Cómo saben que ya no estoy?",
-        a: "Hoy la entrega es manual y está en beta: una persona de confianza que tú designaste nos contacta con documentación, nuestro equipo la verifica y los mensajes salen por email. No hay entrega automática todavía. Si necesitas garantía absoluta, deja también copia con tu albacea o notario.",
+        a: "Con un check-in periódico. Presence te envía un correo cada cierto tiempo — tú eliges la frecuencia — y basta un clic para confirmar que estás bien. Si dejas de responder, esperamos el periodo de gracia que configuraste y recién entonces escribimos a tus contactos de confianza; solo cuando ellos confirman se entregan los mensajes. Todo el proceso es automático y no depende de terceros. Aun así, si necesitas garantía absoluta, deja también copia con tu albacea o notario.",
       },
     ],
     cta: "Escribir mi primer mensaje",

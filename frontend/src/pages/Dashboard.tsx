@@ -36,16 +36,16 @@ const item: Variants = {
 const EmptyIllustration = () => (
   <svg viewBox="0 0 240 180" className="w-48 h-36 mx-auto mb-2" aria-hidden>
     <g transform="rotate(-8 80 90)">
-      <rect x="40" y="40" width="80" height="100" rx="6" fill="#ffffff" stroke="#e5e5e0" />
-      <rect x="46" y="46" width="68" height="72" rx="3" fill="#e0e0d9" />
+      <rect x="40" y="40" width="80" height="100" rx="6" fill="#ffffff" stroke="#E8E8E8" />
+      <rect x="46" y="46" width="68" height="72" rx="3" fill="#F2F2F2" />
     </g>
     <g transform="rotate(6 150 90)">
-      <rect x="110" y="35" width="90" height="110" rx="6" fill="#ffffff" stroke="#e5e5e0" />
-      <rect x="116" y="41" width="78" height="78" rx="3" fill="#f6f6f3" />
-      <circle cx="155" cy="80" r="14" fill="#7e238b" opacity="0.15" />
+      <rect x="110" y="35" width="90" height="110" rx="6" fill="#ffffff" stroke="#E8E8E8" />
+      <rect x="116" y="41" width="78" height="78" rx="3" fill="#FAFAFA" />
+      <circle cx="155" cy="80" r="14" fill="#000000" opacity="0.08" />
       <path
         d="M155 87 C 150 84, 146 80, 146 76 C 146 73, 148 71, 151 71 C 153 71, 155 73, 155 75 C 155 73, 157 71, 159 71 C 162 71, 164 73, 164 76 C 164 80, 160 84, 155 87 Z"
-        fill="#7e238b"
+        fill="#000000"
       />
     </g>
   </svg>
@@ -112,7 +112,7 @@ export const Dashboard = () => {
     >
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+          <p className="eyebrow mb-2">
             Tus memorias
           </p>
           <h1 className="font-serif text-4xl text-warm-plum">Mis Memory Vaults</h1>
@@ -166,7 +166,7 @@ export const Dashboard = () => {
             <Plus size={18} /> Crear el primero
           </Link>
           <div className="mt-10 pt-8 border-t border-warm-sand text-left max-w-md mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-3">
+            <p className="eyebrow mb-3">
               Cómo aprovecharlo
             </p>
             <ol className="space-y-2 text-sm text-warm-olive list-decimal list-inside">

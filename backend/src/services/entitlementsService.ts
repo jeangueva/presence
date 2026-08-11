@@ -1,5 +1,12 @@
 import { supabase } from "../config/supabase.js";
-import { PLAN_ORDER, PLANS, isUnlimited, type Plan, type PlanId } from "../config/plans.js";
+import {
+  DEFAULT_PLAN,
+  PLAN_ORDER,
+  PLANS,
+  isUnlimited,
+  type Plan,
+  type PlanId,
+} from "../config/plans.js";
 import { QuotaExceededError } from "../utils/billingErrors.js";
 
 const startOfMonthIso = () => {
@@ -13,17 +20,31 @@ const cheapestPlanWithRoom = (
   currentPlanId: PlanId,
   predicate: (p: Plan) => boolean
 ): PlanId => {
-  // Search PLAN_ORDER after current; if nothing found, return "family" as fallback.
+  // Search PLAN_ORDER after current; if nothing fits, point at the top tier.
   const idx = PLAN_ORDER.indexOf(currentPlanId);
   for (let i = Math.max(0, idx + 1); i < PLAN_ORDER.length; i++) {
     const candidate = PLANS[PLAN_ORDER[i]];
     if (predicate(candidate)) return candidate.id;
   }
-  return "family";
+  return PLAN_ORDER[PLAN_ORDER.length - 1];
+};
+
+// Accounts created before the repricing carry the old tier names. Map them
+// forward on read so nobody loses access while migration 0013 rolls out.
+const LEGACY_TIER_MAP: Record<string, PlanId> = {
+  free: "memorial",
+  personal: "legado",
+  family: "vault",
+};
+
+const normalizeTier = (raw: string | null | undefined): PlanId => {
+  const tier = raw ?? DEFAULT_PLAN;
+  if (PLANS[tier as PlanId]) return tier as PlanId;
+  return LEGACY_TIER_MAP[tier] ?? DEFAULT_PLAN;
 };
 
 /**
- * Resolve a user's active plan. Falls back to "free" if subscription_status
+ * Resolve a user's active plan. Falls back to the free tier if subscription_status
  * isn't "active" or if the period_end has passed. If migration 0006 hasn't
  * been applied yet (status/period_end columns missing), we still return the
  * plan based on subscription_tier alone — no crash.
@@ -33,11 +54,14 @@ export const getActivePlanId = async (userId: string): Promise<PlanId> => {
     subscription_tier?: string | null;
     subscription_status?: string | null;
     subscription_period_end?: string | null;
+    legado_purchased_at?: string | null;
   } | null = null;
 
   const full = await supabase
     .from("users")
-    .select("subscription_tier, subscription_status, subscription_period_end")
+    .select(
+      "subscription_tier, subscription_status, subscription_period_end, legado_purchased_at"
+    )
     .eq("id", userId)
     .maybeSingle();
 
@@ -53,29 +77,30 @@ export const getActivePlanId = async (userId: string): Promise<PlanId> => {
       .maybeSingle();
     if (minimal.error) {
       console.error("[entitlements] minimal users select también falló:", minimal.error);
-      return "free";
+      return DEFAULT_PLAN;
     }
     row = minimal.data;
   } else {
     row = full.data;
   }
 
-  if (!row) return "free";
+  if (!row) return DEFAULT_PLAN;
 
-  const tier = (row.subscription_tier ?? "free") as PlanId;
-  if (!PLANS[tier]) return "free";
-  if (tier === "free") return "free";
+  // What the user owns outright. A one-time purchase never lapses — that is
+  // the whole promise of "pago único" — so it is the floor they can never drop
+  // below, independent of any subscription state.
+  const owned: PlanId = row.legado_purchased_at ? "legado" : DEFAULT_PLAN;
+
+  const tier = normalizeTier(row.subscription_tier);
+  if (PLANS[tier].billing !== "monthly") return owned;
 
   const status = row.subscription_status ?? "active";
-  if (status !== "active" && status !== "trialing" && status !== "authorized") {
-    return "free";
-  }
+  const lapsed =
+    (status !== "active" && status !== "trialing" && status !== "authorized") ||
+    (!!row.subscription_period_end &&
+      new Date(row.subscription_period_end).getTime() < Date.now());
 
-  if (row.subscription_period_end) {
-    const end = new Date(row.subscription_period_end);
-    if (end.getTime() < Date.now()) return "free";
-  }
-  return tier;
+  return lapsed ? owned : tier;
 };
 
 export const getPlan = async (userId: string): Promise<Plan> => {
@@ -291,4 +316,21 @@ export const enforceCanSendChatMessage = async (userId: string) => {
       message: `Has usado tus ${plan.limits.chat_messages_per_month} mensajes de este mes.`,
     });
   }
+};
+
+/**
+ * The legacy planner, its generated document and the dead-man's switch are the
+ * paid product. The memorial tier can see that they exist but not fill them in.
+ */
+export const enforceCanUseLegacyPlanner = async (userId: string) => {
+  const plan = await getPlan(userId);
+  if (plan.limits.legacy_planner) return;
+  throw new QuotaExceededError({
+    reason: "legacy_planner",
+    current_plan: plan.id,
+    required_plan: cheapestPlanWithRoom(plan.id, (p) => p.limits.legacy_planner),
+    limit: 0,
+    used: 0,
+    message: "Planificar tu legado es parte de Legado, un pago único.",
+  });
 };

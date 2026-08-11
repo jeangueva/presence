@@ -20,8 +20,9 @@ import { api } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useEntitlements } from "../hooks/useEntitlements";
-import { PLANS, type PlanId } from "../lib/plans";
+import { DEFAULT_PLAN, PLANS, type PlanId } from "../lib/plans";
 import { PlanSelectorModal } from "../components/PlanSelectorModal";
+import { DeadmanCard } from "../components/DeadmanCard";
 
 type Account = {
   id: string;
@@ -66,7 +67,7 @@ export const Settings = () => {
         <ArrowLeft size={16} /> Volver
       </Link>
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+        <p className="eyebrow mb-2">
           Cuenta
         </p>
         <h1 className="font-serif text-4xl text-warm-plum">Ajustes</h1>
@@ -78,6 +79,7 @@ export const Settings = () => {
         onUpdated={() => qc.invalidateQueries({ queryKey: ["account"] })}
       />
       <PasswordCard />
+      <DeadmanCard />
       <TwoFactorCard
         enabled={accountQ.data.two_fa_enabled}
         onChanged={() => qc.invalidateQueries({ queryKey: ["account"] })}
@@ -154,7 +156,7 @@ const BillingCard = () => {
     const upgrade = params.get("upgrade");
     if (!upgrade) return;
     if (upgrade === "success") {
-      planAtConfirmStart.current = (entQ.data?.plan as PlanId) ?? "free";
+      planAtConfirmStart.current = (entQ.data?.plan as PlanId) ?? DEFAULT_PLAN;
       setConfirmation("pending");
       // Drop the query param right away; we keep `confirmation` in local state.
       const next = new URLSearchParams(params);
@@ -280,10 +282,10 @@ const BillingCard = () => {
               className="btn-primary inline-flex items-center gap-2"
             >
               <Sparkles size={16} />
-              {plan === "free" ? "Elegir un plan" : "Cambiar de plan"}
+              {PLANS[plan as PlanId].billing === "free" ? "Elegir un plan" : "Cambiar de plan"}
               <ArrowRight size={14} />
             </button>
-            {plan !== "free" && (
+            {PLANS[plan as PlanId].billing === "monthly" && (
               <button
                 onClick={onCancel}
                 disabled={cancelMutation.isPending}

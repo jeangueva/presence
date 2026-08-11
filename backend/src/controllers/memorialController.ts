@@ -24,8 +24,6 @@ import {
   uploadMemorialPhoto,
   uploadObject,
 } from "../services/storageService.js";
-import { generatePhotoStory } from "../services/photoStoryService.js";
-import { updatePhotoStory } from "../services/memorialService.js";
 import { enforceCanCreateMemorial } from "../services/entitlementsService.js";
 import { supabase } from "../config/supabase.js";
 import { badRequest, unauthorized } from "../utils/errors.js";
@@ -164,10 +162,3 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
   res.json(data);
 };
 
-export const photoStoryGenerate = async (req: Request, res: Response) => {
-  const user = getUser(req);
-  await getOwnedMemorial(req.params.id, user.id);
-  const story = await generatePhotoStory(req.params.photoId, req.params.id);
-  await updatePhotoStory(req.params.photoId, story);
-  res.json({ story });
-};

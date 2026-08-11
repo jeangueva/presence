@@ -58,7 +58,7 @@ export const UpgradeModal = ({ open, quota, onClose }: Props) => {
             <div className="w-12 h-12 rounded-2xl bg-warm-accent/10 flex items-center justify-center mb-4">
               <Sparkles size={22} className="text-warm-accent" />
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-warm-silver mb-2">
+            <p className="eyebrow mb-2">
               {reasonLabel[quota.reason] ?? "Has alcanzado un límite"}
             </p>
             <h3 className="font-serif text-2xl text-warm-plum mb-2">

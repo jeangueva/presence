@@ -4,13 +4,23 @@ services:
     runtime: node
     plan: free
     rootDir: backend
-    buildCommand: npm install && npm run build
+    # El free tier construye dentro de 512 MB y `tsc` llegaba a 434 MB de pico,
+    # justo por encima del margen: de ahí el "Ran out of memory".
+    #  - `npm ci` es determinista y más liviano que `npm install`
+    #  - `npm prune --omit=dev` quita typescript/tsx/@types (~35 MB) del runtime
+    #  - NODE_OPTIONS (abajo) acota el heap de V8 para que recolecte en vez de
+    #    crecer hasta que el contenedor lo mate
+    buildCommand: npm ci && npm run build && npm prune --omit=dev
     startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
+      # Sin esto V8 crece hasta que Render mata el proceso. Aplica al build y
+      # al runtime; 256 MB le sobran a un Express en una instancia de 512 MB.
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=256"
       # Render injects PORT automatically; our backend reads process.env.PORT.
 
       # --- Secrets: set these in Render dashboard (sync: false) ---

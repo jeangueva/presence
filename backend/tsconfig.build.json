@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Source maps roughly double what tsc holds in memory and what it writes.
+    // Render's free tier builds inside 512 MB, and nothing uploads these maps
+    // anywhere, so they only cost — they never get read.
+    "sourceMap": false
+  }
+}
